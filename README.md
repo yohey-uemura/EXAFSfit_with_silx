@@ -1,5 +1,6 @@
 # EXAFSfit_with_silx
 GUI for EXAFS fit using Larch* and silx**
+
 *Larch: https://xraypy.github.io/xraylarch/
 *silx: http://www.silx.org/doc/silx/latest/index.html
 
