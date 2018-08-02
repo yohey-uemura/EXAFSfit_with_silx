@@ -215,15 +215,17 @@ class MainWindow(qt.QMainWindow):
             labels+= [paramName,paramState,paramValue]
         for i in range(3,18):
             if i%3 == 0:
-                self.TableW.setColumnWidth(i, 50)
+                self.TableW.setColumnWidth(i, 70)
             elif i%3 == 1:
                 self.TableW.setColumnWidth(i,80)
             elif i%3 == 2:
-                self.TableW.setColumnWidth(i,50)
+                self.TableW.setColumnWidth(i,70)
 
         self.GroupBox = qt.QButtonGroup()
         self.GroupCheckBox = qt.QButtonGroup()
         self.GroupCheckBox.setExclusive(False)
+
+        self.TableW.setHorizontalHeaderLabels(labels)
 
         self.dialog_resultTable = qt.QDialog()
         self.dialog_resultTable.setLayout(qt.QGridLayout())
