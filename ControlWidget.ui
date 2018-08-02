@@ -692,7 +692,7 @@
     </layout>
    </widget>
   </widget>
-  <widget class="QWidget" name="">
+  <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
      <x>30</x>
@@ -754,7 +754,7 @@
        </font>
       </property>
       <property name="styleSheet">
-       <string notr="true">color: rgb(252, 1, 7);</string>
+       <string notr="true">color: rgb(0, 0, 255);</string>
       </property>
       <property name="text">
        <string>Fit</string>

@@ -1,4 +1,4 @@
-import PyQt5.QtCore  # Importing PyQt5 will force silx to use it
+import PyQt5.QtCore as QtCore # Importing PyQt5 will force silx to use it
 from silx.gui import qt
 from silx.gui import widgets as silxwidgets
 from silx.gui.plot import Plot1D, PlotWidget, PlotWindow
@@ -28,6 +28,17 @@ import numpy as np
 import math
 import yaml
 
+
+import matplotlib
+
+matplotlib.use('Qt5Agg')
+
+
+from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
+from matplotlib.figure import Figure
+
+
 # qapp = qt.QApplication([])
 #
 # plot = Plot1D()  # Create the plot widget
@@ -43,14 +54,14 @@ class params:
         homestr = 'HOMEPATH'
     else:
         homestr = 'HOME'
-    colors = ["Red", "Blue", "Green", "DeepPink", "Black", "Orange", "Brown", "OrangeRed",
+    colors = ["Red", "Blue", "Green", "DeepPink", "Orange", "Brown", "OrangeRed",
               "DarkRed", "Crimson", "DarkBlue", "DarkGreen", "Hotpink", "Coral",
               "DarkMagenta", "FireBrick", "GoldenRod", "Grey",
-              "Indigo", "MediumBlue", "MediumVioletRed"]
-    colors_in_rgb = ["#FF0000", "#0000FF", "#00FF00", "#FF1493", "#000000", "#FFA500", "#A52A2A", "#FF4500",
+              "Indigo", "MediumBlue", "MediumVioletRed", "Black"]
+    colors_in_rgb = ["#FF0000", "#0000FF", "#00FF00", "#FF1493", "#FFA500", "#A52A2A", "#FF4500",
                      "#8B0000", "#DC143C", "#00008B", "#006400", "#FF69B4", "#FF7F50",
                      "#8B008B", "#B22222", "#DAA520", "#BEBEBE",
-                     "#00416A", "#0000CD", "#C71585"]
+                     "#00416A", "#0000CD", "#C71585", "#000000"]
     dict_color = {}
     for i in range(len(colors)):
         dict_color[colors[i]] = colors_in_rgb[i]
@@ -61,6 +72,7 @@ class params:
 class MainWindow(qt.QMainWindow):
     wSignal = qt.Signal()
     wS_trendplot = qt.Signal()
+    wS_canvasdraw = qt.Signal()
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
         self.setWindowTitle('PlotWidget with spinboxes')
@@ -78,10 +90,14 @@ class MainWindow(qt.QMainWindow):
         self.uiform_data.setupUi(LeftWidget)
         self.uiform_data.progressBar.setValue(0)
 
+        self.CenterWidget = qt.QTabWidget()
 
-        CenterWidget = qt.QWidget(parent=MainWidget)
-        CenterWidget.setMinimumWidth(700)
-        CenterWidget.setMinimumHeight(550)
+        self.CenterWidget.setMinimumWidth(700)
+        self.CenterWidget.setMinimumHeight(550)
+
+        # CenterWidget = qt.QWidget(parent=MainWidget)
+        # CenterWidget.setMinimumWidth(700)
+        # CenterWidget.setMinimumHeight(550)
         RightWidget = qt.QDockWidget(parent=self)
         RightWidget.setMinimumWidth(320)
         RightWidget.setFeatures(qt.QDockWidget.DockWidgetFloatable |
@@ -112,11 +128,37 @@ class MainWindow(qt.QMainWindow):
         MainWidget.setLayout(HLayout)
         self.setCentralWidget(MainWidget)
 
-        HLayout.addWidget(CenterWidget, 0, 0)
+        HLayout.addWidget(self.CenterWidget, 0, 0)
         HLayout.addWidget(BottomWidget,1,0)
 
-        plt = Plot1D(parent=CenterWidget)
+        plt = Plot1D()
         plt.getLegendsDockWidget().setMaximumHeight(150)
+        self.childWidget_Tab1 = qt.QWidget()
+        self.childWidget_Tab1.setLayout(qt.QGridLayout())
+        self.childWidget_Tab1.layout().addWidget(plt)
+
+        self.CenterWidget.addTab(self.childWidget_Tab1,'EXAFS plot')
+
+        self.childWidget_Tab2 = qt.QWidget()
+
+        self.childWidget_Tab2.setLayout(qt.QGridLayout())
+        self.CenterWidget.addTab(self.childWidget_Tab2, 'Trend plot')
+
+        self.fig = Figure(figsize=(320, 320), dpi=72, facecolor=(1, 1, 1), edgecolor=(0, 0, 0))
+        self.canvas = FigureCanvas(self.fig)
+
+        self.ax = self.fig.add_subplot(111)
+        self.ax.set_xlabel("data")
+        self.ax.set_ylabel("Param")
+        self.ax_r = self.ax.twinx()
+        self.ax_r.set_ylabel("R-factor")
+
+        # navibar = NavigationToolbar(canvas, widget)
+        navibar = NavigationToolbar(self.canvas, parent=None)
+        self.childWidget_Tab2.layout().addWidget(self.canvas,0,0)
+        self.childWidget_Tab2.layout().addWidget(navibar, 1, 0)
+        # self.CenterWidget.setCurrentIndex(1)
+        # self.CenterWidget.addTab('Trend plot')
 
         self.dialog_suffix = qt.QDialog()
         self.suffix_d = ui_Text()
@@ -359,17 +401,17 @@ class MainWindow(qt.QMainWindow):
                                        k_max + 2.0, wind, dr_wind)
             if self.uiform_ctrl.rB_plot_k.isChecked():
                 plt.addCurve(k,chi*(k**kweight),legend='chi',
-                             linewidth=2, color="blue")
+                             linewidth=1.5, color="blue")
                 # chik_max = np.max(np.abs(chi*(k**kweight)))
                 # plt.addCurve(k,kwindow*chik_max*1.25,legend='window')
             elif self.uiform_ctrl.rB_plot_r.isChecked():
                 plt.addCurve(r, chir_mag,legend='chir:mag',
-                             linewidth=2, color="black")
+                             linewidth=1.5, color="black")
                 plt.addCurve(r,chir_im,legend='chir:im',
-                             linewidth=2, color="blue")
+                             linewidth=1.5, color="blue")
                 # plt.addCurve(r, rwindow)
             elif self.uiform_ctrl.rB_plot_q.isChecked():
-                plt.addCurve(q, chi_q,legend="chiq",linewidth=2, color="blue")
+                plt.addCurve(q, chi_q,legend="chiq",linewidth=1.5, color="blue")
                 # plt.addCurve(k, kwindow)
             plt.getLegendsDockWidget().show()
 
@@ -414,7 +456,7 @@ class MainWindow(qt.QMainWindow):
                         k_fit = result[cB.text()]['chi_fit'][:, 0]
                         chi_fit = result[cB.text()]['chi_fit'][:, 1]
                         plt.addCurve(k_fit,chi_fit * k_fit ** float(self.uiform_ctrl.cB_kweight.currentText()),
-                                     color=params.dict_color["Red"],legend="fit",linewidth=2)
+                                     color=params.dict_color["Red"],legend="fit",linewidth=1.5)
                     elif PlotSpace == 'r':
                         k_fit = result[cB.text()]['chi_fit'][:, 0]
                         chi_fit = result[cB.text()]['chi_fit'][:, 1]
@@ -423,14 +465,14 @@ class MainWindow(qt.QMainWindow):
                                                                                    k_min,
                                                                                    k_max,
                                                                                    wind, dk_wind)
-                        plt.addCurve(r_fit, chir_mag_fit, color=params.dict_color["Red"], legend='fit: mag', linewidth=2)
-                        plt.addCurve(r_fit, chir_im_fit, color=params.dict_color["DeepPink"], legend='fit: img', linewidth=2)
+                        plt.addCurve(r_fit, chir_mag_fit, color=params.dict_color["Red"], legend='fit: mag', linewidth=1.5)
+                        plt.addCurve(r_fit, chir_im_fit, color=params.dict_color["DeepPink"], legend='fit: img', linewidth=1.5)
                     elif PlotSpace == 'q':
                         k_fit = result[cB.text()]['chi_fit'][:, 0]
                         chi_fit = result[cB.text()]['chi_fit'][:, 1]
                         r_fit, chir_fit, chir_mag_fit, chir_im_fit = LarchF.calcFT(k_fit, chi_fit,k_weight,k_min,k_max,wind, dk_wind)
                         q_fit, chiq_fit = LarchF.calc_rFT(r_fit, chir_fit, r_min,r_max, k_max + 0.5,wind, dr_wind)
-                        plt.addCurve(q_fit, chiq_fit, color=params.dict_color["Red"], legend='fit', linewidth=2)
+                        plt.addCurve(q_fit, chiq_fit, color=params.dict_color["Red"], legend='fit', linewidth=1.5)
                 else:
                     msgBox = qt.QMessageBox()
                     msgBox.setText("The fitting results doesn't exist in this file.\nPlease choose another file")
@@ -456,6 +498,9 @@ class MainWindow(qt.QMainWindow):
                 plot_each(cb)
                 if self.uiform_ctrl.rB_wFit.isChecked() and self.uiform_data.cB_ploteach.isChecked():
                     plotFitResults(cb)
+                if self.uiform_ctrl.rB_wModel.isChecked() and self.uiform_data.cB_ploteach.isChecked() and\
+                        any([cb.isChecked() for cb in self.GroupCheckBox.buttons()]):
+                    plot_ModelEXAFS()
             if self.uiform_data.listWidget.selectedItems():
                 if self.uiform_ctrl.rB_plot_k.isChecked():
                     xmin, xmax = plt.getGraphXLimits()
@@ -463,7 +508,7 @@ class MainWindow(qt.QMainWindow):
                     x = np.arange(xmin,xmax,0.05)
                     FTwindow = LarchF.calcFTwindow(x,k_min,k_max,dr_wind,wind)
                     plt.addCurve(x,FTwindow*ymax*1.05,legend="window",
-                                 linewidth=2,color=params.dict_color["DarkGreen"])
+                                 linewidth=1.5,color=params.dict_color["DarkGreen"])
                     plt.setGraphXLimits(0, 16.0)
                     plt.setGraphYLimits(ymin * 1.1, ymax * 1.1)
                     plt.setGraphYLabel(label="chi(k)"+"*"+"k^"+str(kweight))
@@ -474,7 +519,7 @@ class MainWindow(qt.QMainWindow):
                     x = np.arange(xmin,xmax,0.05)
                     FTwindow = LarchF.calcFTwindow(x,r_min,r_max,dr_wind,wind)
                     plt.addCurve(x,FTwindow*ymax*1.05,legend="window",
-                                 linewidth=2, color=params.dict_color["DarkGreen"])
+                                 linewidth=1.5, color=params.dict_color["DarkGreen"])
                     plt.setGraphXLimits(0, 6)
                     plt.setGraphYLimits(ymin * 1.1, ymax * 1.1)
                     plt.setGraphYLabel(label="FT[chi(k)" + "*" + "k^" + str(kweight)+"]")
@@ -486,46 +531,194 @@ class MainWindow(qt.QMainWindow):
                     x = np.arange(xmin, xmax, 0.05)
                     FTwindow = LarchF.calcFTwindow(x, k_min, k_max, dk_wind, wind)
                     plt.addCurve(x, FTwindow * ymax * 1.05, legend="window",
-                                 linewidth=2,color=params.dict_color["DarkGreen"])
+                                 linewidth=1.5,color=params.dict_color["DarkGreen"])
                     plt.setGraphXLimits(0, 16.0)
                     plt.setGraphYLimits(ymin*1.1,ymax*1.1)
                     plt.setGraphYLabel(label="chi(q)")
                     plt.setGraphXLabel(label='q /A^-1')
             # plt.addCurve()
 
+        self.plotlines =[]
+
         def plotFittingTrends():
-            datNames = self.Reserver.index.tolist()
-            if plt.getAllCurves():
-                plt.clear()
-            i = 0
-            for param in self.uiform_data.listWidget_2.selectedItems():
-                # if param.text() != 'R-factor':
-                dat = self.Reserver[param.text()].values
-                error = self.Reserver['delta('+param.text()+')']
-                plt.addCurve(range(1,len(datNames)+1),dat,legend=param.text(),
-                             symbol='o',color=params.dict_color[params.colors[i+1]],
-                             yerror=error,yaxis='left')
-                i+=1
-            dat = self.Reserver['R-factor'].values
-            plt.addCurve(range(1,len(datNames)+1),dat,legend='R-factor',symbol='o',
-                         color=params.dict_color[params.colors[0]],yaxis='right')
-            plt.setGraphYLabel(label="R-factor",axis='right')
-            plt.setGraphYLabel(label="Params",axis='left')
-            xmin, xmax = plt.getGraphXLimits()
-            xwidth = abs(xmax-xmin)/2.0
-            xcenter = (xmin+xmax)/2.0
-            plt.setGraphXLimits(xcenter - xwidth * 1.1, xcenter + xwidth * 1.1)
-            ymin, ymax = plt.getGraphYLimits(axis='left')
-            ywidth = abs(ymax-ymin)/2.0
-            ycenter = (ymin + ymax) / 2.0
-            plt.setGraphYLimits(ycenter - ywidth * 1.25,
-                                ycenter + ywidth * 1.25,
-                                axis='left')
+            if self.uiform_data.listWidget_2.count():
+                datNames = self.Reserver.index.tolist()
+                A_params = self.Reserver.keys().tolist()[:-1]
+                if not self.timer.isActive():
+                    self.fig.delaxes(self.ax_r)
+                    self.fig.delaxes(self.ax)
+                    self.ax = self.fig.add_subplot(111)
+                    self.ax.set_xlabel("data")
+                    self.ax.set_ylabel("Param")
+                    self.ax_r = self.ax.twinx()
+                    self.ax_r.set_ylabel("R-factor")
+                xticsLabels = ['#'+x.split(':')[0] for x in self.Reserver.index.tolist()]
+                for param in self.uiform_data.listWidget_2.selectedItems():
+                    # if param.text() != 'R-factor':
+                    xticsLabels.append('#'+param.text().split(':')[0])
+                    dat = self.Reserver[param.text()].values
+                    error = self.Reserver['delta('+param.text()+')']
+                    i = A_params.index(param.text())
+                    l = self.ax.errorbar(range(len(dat)),dat,yerr=error,
+                                     label=param.text(), marker='o', color=params.colors[i], markersize=10
+                                     )
+                    self.plotlines.append(l)
+                    # plt.addCurve(range(1,len(datNames)+1),dat,legend=param.text(),
+                    #              symbol='o',color=params.dict_color[params.colors[i+1]],
+                    #              yerror=error,yaxis='left')
+                    # i+=1
+                dat = self.Reserver['R-factor'].values
+                self.ax_r.plot(range(len(dat)), dat,
+                                 label='R-factor', marker='o', color="k", markersize=10
+                                 )
+                self.ax.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
+                                ncol=2, mode="expand", borderaxespad=0.)
+                self.ax_r.legend(loc=3)
+                self.ax.relim(visible_only=True)
+                self.ax.autoscale_view()
+                self.ax_r.relim(visible_only=True)
+                self.ax_r.autoscale_view()
+                self.ax.set_xticks(range(len(dat)))
+                self.ax.set_xticklabels(xticsLabels)
+
+
+        def trendPlot_change_items():
+            plotFittingTrends()
+            if not self.timer.isActive():
+                self.canvas.draw()
+            # self.wS_canvasdraw.emit()
+            # self.canvas.draw()
+            # plt.setGraphYLabel(label="Params",axis='left')
+            # xmin, xmax = plt.getGraphXLimits()
+            # xwidth = abs(xmax-xmin)/2.0
+            # xcenter = (xmin+xmax)/2.0
+            # plt.setGraphXLimits(xcenter - xwidth * 1.1, xcenter + xwidth * 1.1)
+            # ymin, ymax = plt.getGraphYLimits(axis='left')
+            # ywidth = abs(ymax-ymin)/2.0
+            # ycenter = (ymin + ymax) / 2.0
+            # plt.setGraphYLimits(ycenter - ywidth * 1.25,
+            #                     ycenter + ywidth * 1.25,
+            #                     axis='left')
             # ymin, ymax = plt.getGraphYLimits(axis='right')
             # plt.setGraphYLimits(ymin * 1.1, ymax * 1.1, axis='right')
             #              ,
             #              )
+        def plot_ModelEXAFS():
+            fitParams = larch_builtins._group(self.mylarch)
+            PlotSpace = self.buttonGroup.checkedButton().text()
+            fitParams.s0_2 = larchfit.param(self.uiTableView.doubleSpinBox.value())
+            if self.uiTableView.cB_use_anotherParams.isChecked() and self.uiTableView.lE_params.text() != '':
+                tlist = self.uiTableView.lE_params.text().split(';')
+                for term in tlist:
+                    t_array = term.split('=')
+                    param_name = t_array[0].replace(" ", "")
+                    param_condition = t_array[1][1:-1].replace(" ", "").replace('(', "").replace(')', "").split(',')
+                    setattr(fitParams, param_name, larchfit.guess(float(param_condition[0])))
+            feffpathlist = []
+            for cB in self.GroupCheckBox.buttons():
+                if cB.isChecked():
+                    index_ = self.GroupCheckBox.buttons().index(cB)
+                    feffinp = params.dict_FitConditions['PATH:'+str(index_)]["FilePATH"]
+                    path = feffpath(feffinp, _larch=self.mylarch)
+                    # s02 = Name_for_N+'*'+'s0_2', e0 = Name_for_dE,sigma2 = Name_for_ss, deltar  = Name_for_dR,
+                    Name_for_N = self.TableW.item(index_, 3).text()
+                    State_for_N = self.TableW.cellWidget(index_, 4)
+                    Value_for_N = self.TableW.item(index_, 5).text()
+                    if State_for_N.currentText() == 'def':
+                        setattr(fitParams, Name_for_N, larchfit.param(expr=Value_for_N))
+                    else:
+                        setattr(fitParams, Name_for_N, larchfit.param(float(Value_for_N)))
 
+                    setattr(fitParams, 'degen_path_' + str(index_), path.degen)
+                    # setattr(self.fitParams,'net_'+Name_for_N,larchfit.param(expr=Value_for_N+'*'+str(self.fit_dialog.doubleSpinBox.value())))
+                    Name_for_dE = self.TableW.item(index_, 6).text()
+                    State_for_dE = self.TableW.cellWidget(index_, 7)
+                    Value_for_dE = self.TableW.item(index_, 8).text()
+                    if State_for_dE.currentText() == 'def':
+                        setattr(fitParams, Name_for_dE, larchfit.param(expr=Value_for_dE))
+                    else:
+                        setattr(fitParams, Name_for_dE, larchfit.param(float(Value_for_dE)))
+                    Name_for_dR = self.TableW.item(index_, 9).text()
+                    State_for_dR = self.TableW.cellWidget(index_, 10)
+                    Value_for_dR = self.TableW.item(index_, 11).text()
+                    if State_for_dR.currentText() == 'def':
+                        setattr(fitParams, Name_for_dR, larchfit.param(expr=Value_for_dR))
+                    else:
+                        setattr(fitParams, Name_for_dR, larchfit.param(float(Value_for_dR)))
+                    Name_for_ss = self.TableW.item(index_, 12).text()
+                    State_for_ss = self.TableW.cellWidget(index_, 13)
+                    Value_for_ss = self.TableW.item(index_, 14).text()
+                    if State_for_ss.currentText() == 'def':
+                        setattr(fitParams, Name_for_ss, larchfit.param(expr=Value_for_ss))
+                    else:
+                        setattr(fitParams, Name_for_ss, larchfit.param(float(Value_for_ss)))
+                    Name_for_C3 = self.TableW.item(index_, 15).text()
+                    State_for_C3 = self.TableW.cellWidget(index_, 16)
+                    Value_for_C3 = self.TableW.item(index_, 17).text()
+                    if State_for_C3.currentText() == 'def':
+                        setattr(fitParams, Name_for_C3, larchfit.param(expr=Value_for_C3))
+                    else:
+                        setattr(fitParams, Name_for_C3, larchfit.param(float(Value_for_C3)))
+                    path.s02 = Name_for_N + '*' + 's0_2' + '/' + 'degen_path_' + str(index_)
+                    path.e0 = Name_for_dE
+                    path.sigma2 = Name_for_ss
+                    path.deltar = Name_for_dR
+                    path.third = Name_for_C3
+                    feffpathlist.append(path)
+            FeffitTransform = feffit_transform(fitspace=self.uiform_ctrl.cB_FitSpace.currentText(),
+                                               kmin=self.uiform_ctrl.dB_kmin.value(),
+                                               kmax=self.uiform_ctrl.dB_kmax.value(),
+                                               kw=float(self.uiform_ctrl.cB_kweight.currentText()),
+                                               dk=self.uiform_ctrl.dB_window_dk.value(),
+                                               window=self.uiform_ctrl.cB_WindowType.currentText(),
+                                               rmin=self.uiform_ctrl.dB_rmin.value(),
+                                               rmax=self.uiform_ctrl.dB_rmax.value(),
+                                               _larch=self.mylarch,
+                                               dr=self.uiform_ctrl.dB_window_dr.value())
+            xafsdat = larch_builtins._group(self.mylarch)
+            fname = self.datdir+'/'+ self.uiform_data.listWidget.item(0).text().split(':')[1]
+            xafsdat.k, xafsdat.chi = LarchF.read_chi_file(fname)
+            dset = feffit_dataset(data=xafsdat, pathlist=feffpathlist, transform=FeffitTransform,
+                                  _larch=self.mylarch)
+            out = feffit(fitParams, dset, _larch=self.mylarch)
+            # _ff2chi(feffpathlist,fitParams,xas,_larch=self.mylarch)
+
+            if PlotSpace == 'k':
+                k_fit = dset.model.k
+                chi_fit = dset.model.chi
+                plt.addCurve(k_fit, chi_fit * k_fit ** float(self.u.comboBox.currentText()),
+                        linestyle='--', color=params.dict_color["Red"], legend='model',linewidth=1.5)
+            elif PlotSpace == 'r':
+                k_fit = dset.model.k
+                chi_fit = dset.model.chi
+                wind = self.uiform_ctrl.cB_WindowType.currentText()
+                dk_wind = self.uiform_ctrl.dB_window_dk.value()
+                r_fit, chir_fit, chir_mag_fit, chir_im_fit = LarchF.calcFT(k_fit, chi_fit,
+                                                                           float(self.uiform_ctrl.cB_kweight.currentText()),
+                                                                           self.uiform_ctrl.dB_kmin.value(),
+                                                                           self.uiform_ctrl.dB_kmax.value(),
+                                                                           wind, dk_wind)
+                plt.addCurve(r_fit, chir_mag_fit, linestyle='--', color=params.dict_color["Red"], legend='FT:mag:model',linewidth=1.5)
+                plt.addCurve(r_fit, chir_im_fit, linestyle='--', color=params.dict_color["DeepPink"], legend='FT:img:model',linewidth=1.5)
+            elif PlotSpace == 'q':
+                k_fit = dset.model.k
+                chi_fit = dset.model.chi
+                wind = self.uiform_ctrl.cB_WindowType.currentText()
+                dk_wind = self.uiform_ctrl.dB_window_dk.value()
+                dr_wind = self.uiform_ctrl.dB_window_dr.value()
+                r_fit, chir_fit, chir_mag_fit, chir_im_fit = LarchF.calcFT(k_fit, chi_fit,
+                                                                           float(self.uiform_ctrl.cB_kweight.currentText()),
+                                                                           self.uiform_ctrl.dB_kmin.value(),
+                                                                           self.uiform_ctrl.dB_kmax.value(),
+                                                                           wind, dk_wind)
+                q_fit, chiq_fit = LarchF.calc_rFT(r_fit, chir_fit,
+                                                  self.uiform_ctrl.dB_rmin.value(),
+                                                  self.uiform_ctrl.dB_rmax.value(),
+                                                  self.uiform_ctrl.dB_kmax.value() + 0.5,
+                                                  wind,
+                                                  dr_wind)
+                plt.addCurve(q_fit, chiq_fit,
+                             linestyle='--', color=params.dict_color["Red"], legend='model',linewidth=1.5)
 
         def openFiles():
             while self.uiform_data.listWidget.count():
@@ -592,6 +785,8 @@ class MainWindow(qt.QMainWindow):
                 if self.uiTableView.lE_params.isEnabled() and self.uiTableView.lE_params.text() != '':
                     self.uiTableView.lE_params.clear()
                 self.uiTableView.lE_params.insert(Dict['extra_param'])
+                if self.uiTableView.lE_params.text() != '':
+                    self.uiTableView.cB_use_anotherParams.setCheckState(QtCore.Qt.Checked)
                 for key in ['dB_kmin','dB_kmax','dB_rmin','dB_rmax','dB_window_dk','dB_window_dr']:
                     getattr(self.uiform_ctrl,key).setValue(Dict[key])
                 if Dict['plotSpace'] == 'k':
@@ -638,12 +833,27 @@ class MainWindow(qt.QMainWindow):
             if file[0] != '':
                 self.SaveConditions(file[0])
 
+        def calcDegreeFreedom():
+            k_min = self.uiform_ctrl.dB_kmin.value()
+            k_max = self.uiform_ctrl.dB_kmax.value()
+            r_min = self.uiform_ctrl.dB_rmin.value()
+            r_max = self.uiform_ctrl.dB_rmax.value()
+            degreeF = 2*(k_max-k_min)*(r_max-r_min)/math.pi
+            self.uiform_ctrl.lcdNumber.display(int(degreeF))
+
+        def refresh_Plots():
+            print (self.uiform_data.toolBox.currentIndex())
+            if self.uiform_data.toolBox.currentIndex() == 0:
+                plotData()
+            elif self.uiform_data.toolBox.currentIndex() == 1:
+                trendPlot_change_items()
+
         self.uiform_data.pB_Open.clicked.connect(openFiles)
         self.uiform_data.cB_ploteach.toggled.connect(changeSelectionMode)
         self.uiform_data.listWidget.itemClicked.connect(plotData)
         for name_rb in ['k','r','q']:
             getattr(self.uiform_ctrl,'rB_plot_'+name_rb).clicked.connect(plotData)
-        self.uiform_ctrl.pB_refresh.clicked.connect(plotData)
+        self.uiform_ctrl.pB_refresh.clicked.connect(refresh_Plots)
         self.wSignal.connect(plotData)
         self.uiform_ctrl.cB_showParams.clicked.connect(show_hide_tableview)
         self.uiTableView.pushButton.clicked.connect(close_tableview)
@@ -653,9 +863,21 @@ class MainWindow(qt.QMainWindow):
         self.uiform_bottom.pushButton.clicked.connect(setOutput)
         self.uiTableView.pB_savecondtion.clicked.connect(execSaveConditions)
         self.uiTableView.pB_reload.clicked.connect(reloadConditions)
-        self.wS_trendplot.connect(plotFittingTrends)
-        self.uiform_data.listWidget_2.itemClicked.connect(plotFittingTrends)
+        # self.wS_trendplot.connect(plotFittingTrends)
+        self.uiform_data.listWidget_2.itemClicked.connect(trendPlot_change_items)
+        # self.uiform_data.listWidget_2.currentItemChanged.connect(trendPlot_change_items)
         self.uiform_data.show_TableView.toggled.connect(show_and_hide_tableView)
+        self.uiform_data.toolBox.currentChanged.connect(self.CenterWidget.setCurrentIndex)
+        self.wS_canvasdraw.connect(trendPlot_change_items)
+        for dSB in [self.uiform_ctrl.dB_kmin,
+                    self.uiform_ctrl.dB_kmax,
+                    self.uiform_ctrl.dB_rmin,
+                    self.uiform_ctrl.dB_rmax]:
+            dSB.valueChanged.connect(calcDegreeFreedom)
+        self.uiform_ctrl.dB_kmin.setValue(3.05)
+        self.uiform_ctrl.dB_kmin.setValue(3.00)
+
+
 
     def timerEvent(self, e):
         if self.uiform_data.progressBar.value() < self.uiform_data.progressBar.maximum():
@@ -736,41 +958,49 @@ class MainWindow(qt.QMainWindow):
                                 self.Reserver.loc[cb.text(), 'delta(' + term + ')'] = float(t_array[1])
                     elif getattr(self.fitParams, term).vary == False:
                         if getattr(self.fitParams, term).expr != None:
-                            str_eqn = getattr(self.fitParams, term).expr
-
-                            for nval in self.extra_params[:] + self.params_for_N[:] + self.params_for_dE[:] + \
-                                        self.params_for_dR[:] + self.params_for_ss[:] + self.params_for_C3[:]:
-                                if not "delta" in nval and getattr(self.fitParams, nval).expr == None:
-                                    if getattr(self.fitParams, nval).uvalue is None:
-                                        str_eqn = str_eqn.replace(nval, "self.fitParams." + nval + '.value')
-                                    else:
-                                        str_eqn = str_eqn.replace(nval, "self.fitParams." + nval + '.uvalue')
+                            # print ('constraint:'+term +': '+str(getattr(self.fitParams, term).value))
+                            # print('constraint:' + term + ': ' + str(getattr(self.fitParams, term).stderr))
+                            # str_eqn = getattr(self.fitParams, term).expr
+                            # for nval in self.extra_params[:] + self.params_for_N[:] + self.params_for_dE[:] + \
+                            #             self.params_for_dR[:] + self.params_for_ss[:] + self.params_for_C3[:]:
+                            #     if not "delta" in nval and getattr(self.fitParams, nval).expr == None:
+                            #         if getattr(self.fitParams, nval).uvalue is None:
+                            #             str_eqn = str_eqn.replace(nval, "self.fitParams." + nval + '.value')
+                            #         else:
+                            #             str_eqn = str_eqn.replace(nval, "self.fitParams." + nval + '.uvalue')
 
                             if term in self.params_for_dR:
                                 # t_array = str(getattr(self.fitParams,term).uvalue).split('+/-')
                                 # self.Reserver.loc[key,term] = t_array[0]
-                                for i in range(0, 20):
-                                    if term == self.TableW.item(i, 9).text():
-                                        # eval(str_eqn)
-                                        if '+/-' in str(eval(str_eqn)):
-                                            self.Reserver.loc[cb.text(), term] = float(
-                                                re.search("\w+\=(\d+\.\d+)", self.TableW.item(i, 2).text()).group(1)) + \
-                                                                           float(str(eval(str_eqn)).split('+/-')[0])
-                                            self.Reserver.loc[cb.text(), 'delta(' + term + ')'] = float(str(eval(str_eqn)).split('+/-')[1])
-                                        else:
-                                            self.Reserver.loc[cb.text(), term] = float(
-                                                re.search("\w+\=(\d+\.\d+)", self.TableW.item(i, 2).text()).group(1)) + \
-                                                                           float(str(eval(str_eqn)).split('+/-')[0])
-                                            self.Reserver.loc[cb.text(), 'delta(' + term + ')'] = 0.000
-                                        break
-                                    else:
-                                        pass
+                                self.Reserver.loc[cb.text(), term] = getattr(self.fitParams, term).value
+                                self.Reserver.loc[cb.text(), 'Ro_' + str(i + 1) + '+' + term] = float(t_array[0]) + \
+                                                                                                float(re.search("\w+\=(\d+\.\d+)",self.TableW.item(i,2).text()).group(1))
+                                self.Reserver.loc[cb.text(), 'delta(' + term + ')'] = getattr(self.fitParams,term).stderr
+                                self.Reserver.loc[cb.text(), 'delta(' + 'Ro_' + str(i + 1) + '+' + term + ')'] = getattr(self.fitParams,term).stderr
+                                # for i in range(0, 20):
+                                #     if term == self.TableW.item(i, 9).text():
+                                #         # eval(str_eqn)
+                                #         if '+/-' in str(eval(str_eqn)):
+                                #             self.Reserver.loc[cb.text(), term] = float(
+                                #                 re.search("\w+\=(\d+\.\d+)", self.TableW.item(i, 2).text()).group(1)) + \
+                                #                                            float(str(eval(str_eqn)).split('+/-')[0])
+                                #             self.Reserver.loc[cb.text(), 'delta(' + term + ')'] = float(str(eval(str_eqn)).split('+/-')[1])
+                                #         else:
+                                #             self.Reserver.loc[cb.text(), term] = float(
+                                #                 re.search("\w+\=(\d+\.\d+)", self.TableW.item(i, 2).text()).group(1)) + \
+                                #                                            float(str(eval(str_eqn)).split('+/-')[0])
+                                #             self.Reserver.loc[cb.text(), 'delta(' + term + ')'] = 0.000
+                                #         break
+                                #     else:
+                                #         pass
                             else:
-                                print(str_eqn)
-                                print(eval(str_eqn))
-                                self.Reserver.loc[cb.text(), term] = float(str(eval(str_eqn)).split('+/-')[0])
-                                self.Reserver.loc[cb.text(), 'delta(' + term + ')'] = float(
-                                    str(eval(str_eqn)).split('+/-')[1])
+                                self.Reserver.loc[cb.text(), term] = getattr(self.fitParams, term).value
+                                self.Reserver.loc[cb.text(), 'delta(' + term + ')'] = getattr(self.fitParams, term).stderr
+                                # print(str_eqn)
+                                # print(eval(str_eqn))
+                                # self.Reserver.loc[cb.text(), term] = float(str(eval(str_eqn)).split('+/-')[0])
+                                # self.Reserver.loc[cb.text(), 'delta(' + term + ')'] = float(
+                                #     str(eval(str_eqn)).split('+/-')[1])
                         else:
                             if term in self.params_for_dR:
                                 t_array = str(getattr(self.fitParams, term).uvalue).split('+/-')
@@ -789,10 +1019,10 @@ class MainWindow(qt.QMainWindow):
                             else:
                                 self.Reserver.loc[cb.text(), term] = getattr(self.fitParams, term).value
                                 self.Reserver.loc[cb.text(), 'delta(' + term + ')'] = 0.000
-            logfile = open(self.path_to_log + re.search("\d+\:(.+)\.\w+$", cb.text()).group(1) + '.log', 'w')
-            logfile.write(line)
-            # print type(line)
-            logfile.close()
+            # logfile = open(self.path_to_log + re.search("\d+\:(.+)\.\w+$", cb.text()).group(1) + '.log', 'w')
+            # logfile.write(line)
+            # # print type(line)
+            # logfile.close()
             self.uiform_data.progressBar.setValue(self.uiform_data.progressBar.value() + 1)
             # self.hdf5.create_group("Hello")
             self.hdf5.create_group(cb.text())
@@ -894,6 +1124,8 @@ class MainWindow(qt.QMainWindow):
                 pass
         else:
             self.timer.stop()
+            # self.uiform_ctrl.pB_Fit.setText("Fit")
+            # self.uiform_ctrl.pB_Fit.setStyleSheet("color: rgb(252, 1, 7);")
             # print ('Timer stopped')
             self.hdf5.close()
             self.Reserver.loc[:, self.paramNames[:-1] + self.extra_params[:]].to_csv(
@@ -922,8 +1154,13 @@ class MainWindow(qt.QMainWindow):
                     model.setItem(i, j, qt.QStandardItem(str(self.Reserver.loc[Index,Name])))
             self.ui_resultTable.setModel(model)
 
-            self.wS_trendplot.emit()
             self.uiform_data.toolBox.setCurrentIndex(1)
+            # self.wS_canvasdraw.emit()
+
+            # self.wS_trendplot.emit()
+            #self.wS_canvasdraw.emit()
+
+
 
     def SaveConditions(self, fname):
         Dict = {}
@@ -970,13 +1207,22 @@ class MainWindow(qt.QMainWindow):
     def DoAction(self):
         # print ("Hello")
         # self.uiform_data = Form_DataW()
+        self.fig.delaxes(self.ax_r)
+        self.fig.delaxes(self.ax)
+        self.ax = self.fig.add_subplot(111)
+        self.ax.set_xlabel("data")
+        self.ax.set_ylabel("Param")
+        self.ax_r = self.ax.twinx()
+        self.ax_r.set_ylabel("R-factor")
         while self.uiform_data.listWidget_2.count():
-            item = self.uiform_data.listWidget.takeItem(0)
+            item = self.uiform_data.listWidget_2.takeItem(0)
             del item
         del self.mylarch
         self.mylarch = larch.Interpreter(with_plugins=False)
         if self.timer.isActive():
             self.timer.stop()
+            self.uiform_ctrl.pB_Fit.setText("Fit")
+            self.uiform_ctrl.pB_Fit.setStyleSheet("color: rgb(252, 1, 7);")
         else:
             A_checkstates = []
             # A_filePATH = []
@@ -1207,7 +1453,14 @@ class MainWindow(qt.QMainWindow):
                     else:
                         self.params_def.append(term)
                 self.uiform_data.progressBar.setValue(0)
-                self.timer.start(1, self)
+                if len(self.params_guess) > self.uiform_ctrl.lcdNumber.value():
+                    msgBox = qt.QMessageBox()
+                    msgBox.setText("Error: the number of free parameters exceeds the maximum allowed number.")
+                    msgBox.exec_()
+                else:
+                    self.timer.start(1, self)
+                    # self.uiform_ctrl.pB_Fit.setText("Stop")
+                    # self.uiform_ctrl.pB_Fit.setStyleSheet("color: rgb(255, 0, 0);")
             elif not any(A_checkstates) and self.uiform_data.listWidget.count() and outfile != "":
                 msgBox = qt.QMessageBox()
                 msgBox.setText("Error: you did not set any FEFF paths.")
