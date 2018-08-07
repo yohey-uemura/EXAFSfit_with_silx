@@ -423,12 +423,12 @@
     </property>
     <item>
      <property name="text">
-      <string>kaiser</string>
+      <string>hanning</string>
      </property>
     </item>
     <item>
      <property name="text">
-      <string>hanning</string>
+      <string>kaiser</string>
      </property>
     </item>
     <item>
@@ -542,7 +542,7 @@
      <double>0.100000000000000</double>
     </property>
     <property name="value">
-     <double>1.000000000000000</double>
+     <double>0.050000000000000</double>
     </property>
    </widget>
    <widget class="QLabel" name="label_12">
@@ -589,7 +589,7 @@
      <double>0.100000000000000</double>
     </property>
     <property name="value">
-     <double>1.000000000000000</double>
+     <double>0.050000000000000</double>
     </property>
    </widget>
   </widget>

@@ -2,12 +2,14 @@ import PyQt5.QtCore as QtCore # Importing PyQt5 will force silx to use it
 from silx.gui import qt
 from silx.gui import widgets as silxwidgets
 from silx.gui.plot import Plot1D, PlotWidget, PlotWindow
+from silx.gui.plot.actions.control import ZoomBackAction, CrosshairAction
 from ControlWidget import Ui_Form as Form_ControlW
 from DataWidget import Ui_Form as Form_DataW
 from OutputWidget import Ui_Form as Form_ButtomW
 from dialog_Fit import Ui_Dialog as ui_tableview
 from dialog_FEFF import Ui_Dialog as dialogFEFF
 from dialog_Text import Ui_Dialog as ui_Text
+from guessMinMax import Ui_Form as uiSetRange
 import os
 import sys
 import natsort
@@ -68,6 +70,46 @@ class params:
 
     dict_FitConditions = {}
     feffdir = ''
+
+class Plot1DWithContextMenu(Plot1D):
+    """This class adds a custom context menu to PlotWidget's plot area."""
+
+    def __init__(self, *args, **kwargs):
+        super(Plot1DWithContextMenu, self).__init__(*args, **kwargs)
+
+        customAction = qt.QAction(qt.QIcon('Save-icon.png'),
+                                  "Save Current Data",
+                                  parent=self)
+
+        # Create QAction for the context menu once for all
+        self._zoomBackAction = ZoomBackAction(plot=self, parent=self)
+        self._myAction = customAction
+
+        # Retrieve PlotWidget's plot area widget
+        plotArea = self.getWidgetHandle()
+
+        # Set plot area custom context menu
+        plotArea.setContextMenuPolicy(qt.Qt.CustomContextMenu)
+        plotArea.customContextMenuRequested.connect(self._contextMenu)
+
+    def _contextMenu(self, pos):
+        """Handle plot area customContextMenuRequested signal.
+
+        :param QPoint pos: Mouse position relative to plot area
+        """
+        # Create the context menu
+        menu = qt.QMenu(self)
+        menu.addAction(self._zoomBackAction)
+        menu.addSeparator()
+        menu.addAction(self._myAction)
+
+        # Displaying the context menu at the mouse position requires
+        # a global position.
+        # The position received as argument is relative to PlotWidget's
+        # plot area, and thus needs to be converted.
+        plotArea = self.getWidgetHandle()
+        globalPosition = plotArea.mapToGlobal(pos)
+        menu.exec_(globalPosition)
 
 class MainWindow(qt.QMainWindow):
     wSignal = qt.Signal()
@@ -131,8 +173,51 @@ class MainWindow(qt.QMainWindow):
         HLayout.addWidget(self.CenterWidget, 0, 0)
         HLayout.addWidget(BottomWidget,1,0)
 
-        plt = Plot1D()
+        #plt = Plot1D()
+        plt = Plot1DWithContextMenu()
+        def SaveCurrentDataSets():
+            if self.uiform_data.listWidget.count() and plt.getAllCurves():
+                dict_Curves = {}
+                xlabel = self.buttonGroup.checkedButton().text()
+                dataOrder = []
+                for l in plt.getAllCurves():
+                    dict_Curves[l.getLegend().split(':')[0]+':'+xlabel] = l.getData()[0]
+                    dataOrder.append(l.getLegend().split(':')[0]+':'+xlabel)
+                    dict_Curves[l.getLegend()] = l.getData()[1]
+                    dataOrder.append(l.getLegend())
+
+                maxL = 0
+                for i in range(len(dataOrder)):
+                    if i == 0:
+                        maxL = len(dict_Curves[dataOrder[i]])
+                    elif i >=1:
+                        if maxL < len(dict_Curves[dataOrder[i]]):
+                            maxL = len(dict_Curves[dataOrder[i]])
+
+                for i in range(len(dataOrder)):
+                    if len(dict_Curves[dataOrder[i]]) < maxL:
+                        tarray = dict_Curves[dataOrder[i]].tolist()
+                        for j in range(maxL-len(tarray)):
+                            tarray.append(float("nan"))
+                        print (len(tarray))
+                        dict_Curves[dataOrder[i]] = tarray[:]
+                for i in range(len(dataOrder)):
+                    print (dataOrder[i] +':' + str(len(dict_Curves[dataOrder[i]])))
+
+                FO_dialog = qt.QFileDialog(self)
+                file = FO_dialog.getSaveFileName(None, 'Set the output file',
+                                                 params.dir, "csv files(*.csv *.CSV)")
+                if file[0]:
+                    pd.DataFrame(dict_Curves)[dataOrder].to_csv(os.path.abspath(file[0]),
+                                                                sep=" ",
+                                                                index=False
+                                                                )
+                    #print (l.getData())
+                    #print (l.getLegend())
+        plt._myAction.triggered.connect(SaveCurrentDataSets)
         plt.getLegendsDockWidget().setMaximumHeight(150)
+
+
         self.childWidget_Tab1 = qt.QWidget()
         self.childWidget_Tab1.setLayout(qt.QGridLayout())
         self.childWidget_Tab1.layout().addWidget(plt)
@@ -164,6 +249,10 @@ class MainWindow(qt.QMainWindow):
         self.suffix_d = ui_Text()
         self.suffix_d.setupUi(self.dialog_suffix)
 
+        self.dialog_SetRange = qt.QDialog()
+        self.uiSetRange = uiSetRange()
+        self.uiSetRange.setupUi(self.dialog_SetRange)
+
         self.tableview = qt.QDialog()
         self.uiTableView = ui_tableview()
         self.uiTableView.setupUi(self.tableview)
@@ -176,12 +265,34 @@ class MainWindow(qt.QMainWindow):
 
         def openMenu(position):
             num_of_row = self.TableW.currentRow()
+            num_of_collumn = self.TableW.currentColumn()
             menu = qt.QMenu()
             actionChangeSubscript = menu.addAction("Change Subscripts of this row")
+            actionSetRange = menu.addAction("Guess with max and min")
             action = menu.exec_(self.TableW.viewport().mapToGlobal(position))
             if action == actionChangeSubscript:
                 if self.TableW.item(num_of_row, 2).text() != 'EMPTY':
                     self.dialog_suffix.exec_()
+            elif action == actionSetRange:
+                if self.TableW.item(num_of_row, 2).text() != 'EMPTY' and \
+                    any([num_of_collumn == x for x in [5, 8, 11, 14,17] ]):
+                    for term in ['lE_value', 'lE_min', 'lE_max']:
+                        getattr(self.uiSetRange, term).clear()
+                    self.uiSetRange.lE_value.setText(self.TableW.item(num_of_row, num_of_collumn).text())
+                    combobox = self.TableW.cellWidget(num_of_row, num_of_collumn-1)
+                    if ':' in self.TableW.item(num_of_row, num_of_collumn).text():
+                        A = self.TableW.item(num_of_row, num_of_collumn).text().split(':')
+                        self.uiSetRange.lE_value.setText(A[0])
+                        l = ''
+                        for term in A[1]:
+                            l += term
+                        # l.replace('[','').replace(']','')
+                        self.uiSetRange.lE_min.setText(l[1:-1].split(',')[0])
+                        self.uiSetRange.lE_max.setText(l[1:-1].split(',')[1])
+                    # print (combobox.currentText())
+                    if combobox.currentIndex() !=0:
+                        combobox.setCurrentIndex(3)
+                    self.dialog_SetRange.exec_()
 
         def change_suffix():
             num_of_row = self.TableW.currentRow()
@@ -197,7 +308,44 @@ class MainWindow(qt.QMainWindow):
                         self.TableW.setItem(num_of_row, i, qt.QTableWidgetItem(name + suffix))
             self.dialog_suffix.done(1)
 
+        def guessWithRange():
+
+            def isfloat(value):
+                try:
+                    float(value)
+                    return True
+                except ValueError:
+                    return False
+
+            num_of_row = self.TableW.currentRow()
+            num_of_collumn = self.TableW.currentColumn()
+            txt = ''
+            if isfloat(self.uiSetRange.lE_value.text()):
+                txt += self.uiSetRange.lE_value.text()+':'
+            else:
+                txt += ','
+            if isfloat(self.uiSetRange.lE_min.text()):
+                txt +='['+self.uiSetRange.lE_min.text()+','
+            else:
+                txt += '['+'float("nan"),'
+            if isfloat(self.uiSetRange.lE_max.text()):
+                txt += self.uiSetRange.lE_max.text() + ']'
+            else:
+                txt += 'float("nan")'+']'
+
+            if not isfloat(txt.split(':')[0]):
+                pass
+            elif isfloat(txt.split(':')[0]) and any([not math.isnan(x) for x in eval(txt.split(':')[1])]):
+                self.TableW.setItem(num_of_row, num_of_collumn, qt.QTableWidgetItem(txt.replace('float("nan")','')))
+            elif isfloat(txt.split(':')[0]) and all([not math.isnan(x) for x in eval(txt.split(':')[1])]):\
+                self.TableW.setItem(num_of_row, num_of_collumn, qt.QTableWidgetItem(txt))
+
+            self.dialog_SetRange.done(1)
+
+
+
         self.suffix_d.pushButton.clicked.connect(change_suffix)
+        self.uiSetRange.pB_set.clicked.connect(guessWithRange)
 
         self.TableW.customContextMenuRequested.connect(openMenu)
 
@@ -317,7 +465,7 @@ class MainWindow(qt.QMainWindow):
                             self.TableW.item(pathn,3+3*['N','dE','dR','ss','C3'].index(term)+i).setForeground(qt.QColor('blue'))
                         elif i == 1:
                             comboBox = qt.QComboBox()
-                            comboBox.addItems(['guess','set','def'])
+                            comboBox.addItems(['guess','set','def','guess_wRange'])
                             if term == 'C3':
                                 comboBox.setCurrentIndex(1)
                             self.TableW.setCellWidget(pathn,3+3*['N','dE','dR','ss','C3'].index(term)+i,comboBox)
@@ -402,18 +550,18 @@ class MainWindow(qt.QMainWindow):
             q, chi_q = LarchF.calc_rFT(r, chir, r_min, r_max,
                                        k_max + 2.0, wind, dr_wind)
             if self.uiform_ctrl.rB_plot_k.isChecked():
-                plt.addCurve(k,chi*(k**kweight),legend='chi',
+                plt.addCurve(k,chi*(k**kweight),legend=widget.text().split(':')[1]+':chi(k)*k^'+str(int(kweight)),
                              linewidth=1.5, color="blue")
                 # chik_max = np.max(np.abs(chi*(k**kweight)))
                 # plt.addCurve(k,kwindow*chik_max*1.25,legend='window')
             elif self.uiform_ctrl.rB_plot_r.isChecked():
-                plt.addCurve(r, chir_mag,legend='chir:mag',
+                plt.addCurve(r, chir_mag,legend=widget.text().split(':')[1]+':chir_mag',
                              linewidth=1.5, color="black")
-                plt.addCurve(r,chir_im,legend='chir:im',
+                plt.addCurve(r,chir_im,legend=widget.text().split(':')[1]+':chir_im',
                              linewidth=1.5, color="blue")
                 # plt.addCurve(r, rwindow)
             elif self.uiform_ctrl.rB_plot_q.isChecked():
-                plt.addCurve(q, chi_q,legend="chiq",linewidth=1.5, color="blue")
+                plt.addCurve(q, chi_q,legend=widget.text().split(':')[1]+":chiq",linewidth=1.5, color="blue")
                 # plt.addCurve(k, kwindow)
             plt.getLegendsDockWidget().show()
 
@@ -507,7 +655,9 @@ class MainWindow(qt.QMainWindow):
                 if self.uiform_ctrl.rB_plot_k.isChecked():
                     xmin, xmax = plt.getGraphXLimits()
                     ymin, ymax = plt.getGraphYLimits()
-                    x = np.arange(xmin,xmax,0.05)
+                    l = plt.getAllCurves()[0]
+                    # x = np.arange(xmin,xmax,0.05)
+                    x = l.getData()[0]
                     FTwindow = LarchF.calcFTwindow(x,k_min,k_max,dr_wind,wind)
                     plt.addCurve(x,FTwindow*ymax*1.05,legend="window",
                                  linewidth=1.5,color=params.dict_color["DarkGreen"])
@@ -518,7 +668,9 @@ class MainWindow(qt.QMainWindow):
                 elif self.uiform_ctrl.rB_plot_r.isChecked():
                     xmin, xmax = plt.getGraphXLimits()
                     ymin, ymax = plt.getGraphYLimits()
-                    x = np.arange(xmin,xmax,0.05)
+                    l = plt.getAllCurves()[0]
+                    # x = np.arange(xmin,xmax,0.05)
+                    x = l.getData()[0]
                     FTwindow = LarchF.calcFTwindow(x,r_min,r_max,dr_wind,wind)
                     plt.addCurve(x,FTwindow*ymax*1.05,legend="window",
                                  linewidth=1.5, color=params.dict_color["DarkGreen"])
@@ -530,7 +682,9 @@ class MainWindow(qt.QMainWindow):
 
                     xmin, xmax = plt.getGraphXLimits()
                     ymin, ymax = plt.getGraphYLimits()
-                    x = np.arange(xmin, xmax, 0.05)
+                    l = plt.getAllCurves()[0]
+                    # x = np.arange(xmin,xmax,0.05)
+                    x = l.getData()[0]
                     FTwindow = LarchF.calcFTwindow(x, k_min, k_max, dk_wind, wind)
                     plt.addCurve(x, FTwindow * ymax * 1.05, legend="window",
                                  linewidth=1.5,color=params.dict_color["DarkGreen"])
@@ -688,7 +842,7 @@ class MainWindow(qt.QMainWindow):
             if PlotSpace == 'k':
                 k_fit = dset.model.k
                 chi_fit = dset.model.chi
-                plt.addCurve(k_fit, chi_fit * k_fit ** float(self.u.comboBox.currentText()),
+                plt.addCurve(k_fit, chi_fit * k_fit ** float(self.uiform_ctrl.cB_kweight.currentText()),
                         linestyle='--', color=params.dict_color["Red"], legend='model',linewidth=1.5)
             elif PlotSpace == 'r':
                 k_fit = dset.model.k
@@ -815,8 +969,8 @@ class MainWindow(qt.QMainWindow):
                         # self.TableW.item(i,num).setFont(self.font)
                         self.TableW.item(i,num).setForeground(qt.QColor('blue'))
                         comboBox = qt.QComboBox()
-                        comboBox.addItems(['guess','set','def'])
-                        comboBox.setCurrentIndex(['guess','set','def'].index(Dict[array_path[i]][term]['state']))
+                        comboBox.addItems(['guess','set','def','guess_wRange'])
+                        comboBox.setCurrentIndex(['guess','set','def','guess_wRange'].index(Dict[array_path[i]][term]['state']))
                         self.TableW.setCellWidget(i,num+1,comboBox)
                         self.TableW.setItem(i,num+2,qt.QTableWidgetItem(Dict[array_path[i]][term]['value']))
 
@@ -894,16 +1048,19 @@ class MainWindow(qt.QMainWindow):
                                   transform=self.FeffitTransform,_larch=self.mylarch)
             out = feffit(self.fitParams, dset, _larch=self.mylarch)
             line = feffit_report(out, _larch=self.mylarch)
-            for term in self.extra_params:
-                if re.match("delta.*", term) != None:
-                    pass
-                elif getattr(self.fitParams, term).vary == True:
-                    t_array = str(getattr(self.fitParams, term).uvalue).split('+/-')
-                    self.Reserver.loc[cb.text(), term] = t_array[0]
-                    self.Reserver.loc[cb.text(), 'delta(' + term + ')'] = t_array[1]
-                else:
-                    self.Reserver.loc[cb.text(), term] = str(getattr(self.fitParams, term).value)
-            for term in self.extra_params[:]+self.params_for_N[:]+self.params_for_dE[:]+\
+            # for term in self.extra_params:
+            #     if re.match("delta.*", term) != None:
+            #         pass
+            #     elif getattr(self.fitParams, term).vary == True:
+            #         #t_array = str(getattr(self.fitParams, term).uvalue).split('+/-')
+            #         self.Reserver.loc[cb.text(), term] = getattr(self.fitParams, term).value
+            #         self.Reserver.loc[cb.text(), 'delta(' + term + ')'] = getattr(self.fitParams, term).stderr
+            #     else:
+            #         self.Reserver.loc[cb.text(), term] = str(getattr(self.fitParams, term).value)
+            #         self.Reserver.loc[cb.text(), 'delta(' + term + ')'] = 0.000
+            A_s02 = ['s0_2','delta(s0_2)']*self.uiTableView.checkBox.isChecked()
+            for term in self.extra_params[:]+A_s02[:]+\
+                    self.params_for_N[:]+self.params_for_dE[:]+\
                     self.params_for_dR[:]+self.params_for_ss[:]+self.params_for_C3[:]+['R-factor','log'][:]:
                 # print (term)
                 if re.match("delta.*", term) != None:
@@ -933,31 +1090,31 @@ class MainWindow(qt.QMainWindow):
 
                         else:
                             if term in self.params_for_dR:
-                                t_array = str(getattr(self.fitParams, term).uvalue).split('+/-')
-                                self.Reserver.loc[cb.text(), term] = float(t_array[0])
+                                # t_array = str(getattr(self.fitParams, term).uvalue).split('+/-')
+                                # self.Reserver.loc[cb.text(), term] = float(t_array[0])
                                 for i in range(0, 20):
                                     if term == self.TableW.item(i, 9).text():
                                         # print self.TableW.item(i,9).text()
                                         # print(self.TableW.item(i, 2).text())
                                         # self.Reserver.loc[cb.text(), term] = float(t_array[0]) + float(re.search("\w+\=(\d+\.\d+)", self.TableW.item(i, 2).text()).group(1))
-                                        self.Reserver.loc[cb.text(), 'Ro_' + str(i+1) + '+' + term] = float(t_array[0]) +\
+                                        self.Reserver.loc[cb.text(), 'Ro_' + str(i+1) + '+' + term] = getattr(self.fitParams, term).value +\
                                                                                                     float(re.search("\w+\=(\d+\.\d+)", self.TableW.item(i, 2).text()).group(1))
                                         self.Reserver.loc[cb.text(), term] = getattr(self.fitParams, term).value
                                         break
                                     else:
                                         pass
-                                self.Reserver.loc[cb.text(), 'delta(' + term + ')'] = float(t_array[1])
-                                self.Reserver.loc[cb.text(), 'delta(' + 'Ro_' + str(i+1) + '+' + term + ')'] = float(t_array[1])
+                                self.Reserver.loc[cb.text(), 'delta(' + term + ')'] = getattr(self.fitParams, term).stderr
+                                self.Reserver.loc[cb.text(), 'delta(' + 'Ro_' + str(i+1) + '+' + term + ')'] = getattr(self.fitParams, term).stderr
                             else:
                                 # print(str(getattr(self.fitParams, term).uvalue))
-                                t_array = str(getattr(self.fitParams, term).uvalue).split('+/-')
-                                if 'e' in str(getattr(self.fitParams, term).uvalue):
-                                    t_array0 = str(getattr(self.fitParams, term).uvalue).replace('(','' ).split(')')
-                                    t_array = [t_array0.split('+/-')[0] + t_array0[1],
-                                               t_array0.split('+/-')[1] + t_array0[1]]
+                                # t_array = str(getattr(self.fitParams, term).uvalue).split('+/-')
+                                # if 'e' in str(getattr(self.fitParams, term).uvalue):
+                                #     t_array0 = str(getattr(self.fitParams, term).uvalue).replace('(','' ).split(')')
+                                #     t_array = [t_array0.split('+/-')[0] + t_array0[1],
+                                #                t_array0.split('+/-')[1] + t_array0[1]]
 
-                                self.Reserver.loc[cb.text(), term] = float(t_array[0])
-                                self.Reserver.loc[cb.text(), 'delta(' + term + ')'] = float(t_array[1])
+                                self.Reserver.loc[cb.text(), term] = getattr(self.fitParams, term).value
+                                self.Reserver.loc[cb.text(), 'delta(' + term + ')'] = getattr(self.fitParams, term).stderr
                     elif getattr(self.fitParams, term).vary == False:
                         if getattr(self.fitParams, term).expr != None:
                             # print ('constraint:'+term +': '+str(getattr(self.fitParams, term).value))
@@ -975,7 +1132,7 @@ class MainWindow(qt.QMainWindow):
                                 # t_array = str(getattr(self.fitParams,term).uvalue).split('+/-')
                                 # self.Reserver.loc[key,term] = t_array[0]
                                 self.Reserver.loc[cb.text(), term] = getattr(self.fitParams, term).value
-                                self.Reserver.loc[cb.text(), 'Ro_' + str(i + 1) + '+' + term] = float(t_array[0]) + \
+                                self.Reserver.loc[cb.text(), 'Ro_' + str(i + 1) + '+' + term] = getattr(self.fitParams, term).value + \
                                                                                                 float(re.search("\w+\=(\d+\.\d+)",self.TableW.item(i,2).text()).group(1))
                                 self.Reserver.loc[cb.text(), 'delta(' + term + ')'] = getattr(self.fitParams,term).stderr
                                 self.Reserver.loc[cb.text(), 'delta(' + 'Ro_' + str(i + 1) + '+' + term + ')'] = getattr(self.fitParams,term).stderr
@@ -1073,7 +1230,7 @@ class MainWindow(qt.QMainWindow):
                     if cB.isChecked():
                         index_ = self.GroupCheckBox.buttons().index(cB)
                         if self.uiTableView.checkBox.isChecked():
-                            self.fitParams.s0_2 = larchfit.guess(self.fit_dialog.doubleSpinBox.value())
+                            self.fitParams.s0_2 = larchfit.guess(self.uiTableView.doubleSpinBox.value())
                         Name_for_N = self.TableW.item(index_, 3).text()
                         # print Name_for_N
                         State_for_N = self.TableW.cellWidget(index_, 4)
@@ -1130,6 +1287,9 @@ class MainWindow(qt.QMainWindow):
             # self.uiform_ctrl.pB_Fit.setStyleSheet("color: rgb(252, 1, 7);")
             # print ('Timer stopped')
             self.hdf5.close()
+            # print (self.Reserver.keys())
+            # print (self.paramNames[:-1])
+            # print (self.extra_params[:])
             self.Reserver.loc[:, self.paramNames[:-1] + self.extra_params[:]].to_csv(
                 path_or_buf=self.uiform_bottom.textBrowser.toPlainText(),
                 header=self.paramNames[:-1] + self.extra_params[:], index_label='data', sep=' ')
@@ -1243,6 +1403,8 @@ class MainWindow(qt.QMainWindow):
                 self.extra_params = []
                 if self.uiTableView.checkBox.isChecked():
                     self.fitParams.s0_2 = larchfit.guess(self.uiTableView.doubleSpinBox.value())
+                    # self.extra_params.append('s0_2')
+                    # self.extra_params.append('delta(' + 's0_2' + ')')
                 if self.uiTableView.cB_use_anotherParams.isChecked() and self.uiTableView.lE_params.text() != '':
                     tlist = self.uiTableView.lE_params.text().split(';')
                     # txt = ''
@@ -1282,7 +1444,7 @@ class MainWindow(qt.QMainWindow):
                                 setattr(self.fitParams, param_name, larchfit.param(float(param_condition[0])))
                                 self.extra_params.append(param_name)
                                 self.extra_params.append('delta(' + param_name + ')')
-                print(self.extra_params)
+                # print(self.extra_params)
                 self.pathlist = []
                 self.paramNames = []
                 self.params_for_N = []
