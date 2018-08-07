@@ -56,7 +56,10 @@ class Ui_Dialog(object):
         self.lE_params = QtWidgets.QLineEdit(Dialog)
         self.lE_params.setEnabled(False)
         self.lE_params.setGeometry(QtCore.QRect(230, 20, 731, 31))
+        self.lE_params.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
         self.lE_params.setObjectName("lE_params")
+        self.actionAdd = QtWidgets.QAction(Dialog)
+        self.actionAdd.setObjectName("actionAdd")
 
         self.retranslateUi(Dialog)
         QtCore.QMetaObject.connectSlotsByName(Dialog)
@@ -71,4 +74,5 @@ class Ui_Dialog(object):
         self.pB_savecondtion.setText(_translate("Dialog", "Save conditions"))
         self.cB_use_anotherParams.setText(_translate("Dialog", "Use another parameters"))
         self.lE_params.setToolTip(_translate("Dialog", "<html><head/><body><p><span style=\" font-size:10pt;\">Write another parameters for fitting.</span></p><p><span style=\" font-size:10pt;\">Ex.1: parameter name: dR, initial value: 0.05, status[guess or set]: guess</span></p><p><span style=\" font-size:10pt;\">=&gt; dR=[0.05, guess] (use quotation mark for strings. Separate each parameters with \';\')</span></p><p><span style=\" font-size:10pt;\">Ex.2: parameter name: alpha, initial value: 0.05, status[guess or set]: guess, \'alpha\' should be between 0 and 1</span></p><p><span style=\" font-size:10pt;\">=&gt; dR=[0.05, guess, (0:1)] (use quotation mark for strings. Separate each parameters with \';\')</span><br/></p></body></html>"))
+        self.actionAdd.setText(_translate("Dialog", "Add Another Params"))
 

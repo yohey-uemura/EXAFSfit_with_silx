@@ -10,6 +10,7 @@ from dialog_Fit import Ui_Dialog as ui_tableview
 from dialog_FEFF import Ui_Dialog as dialogFEFF
 from dialog_Text import Ui_Dialog as ui_Text
 from guessMinMax import Ui_Form as uiSetRange
+from addAnotherParams import Ui_Form as uiAddAnotherParams
 import os
 import sys
 import natsort
@@ -47,6 +48,13 @@ from matplotlib.figure import Figure
 # plot.show()  # Make the plot widget visible
 #
 # qapp.exec_()
+
+def isfloat(value):
+    try:
+        float(value)
+        return True
+    except ValueError:
+        return False
 
 class params:
     dir = ""
@@ -216,6 +224,7 @@ class MainWindow(qt.QMainWindow):
                     #print (l.getLegend())
         plt._myAction.triggered.connect(SaveCurrentDataSets)
         plt.getLegendsDockWidget().setMaximumHeight(150)
+        plt.controlButton.setEnabled(False)
 
 
         self.childWidget_Tab1 = qt.QWidget()
@@ -253,6 +262,10 @@ class MainWindow(qt.QMainWindow):
         self.uiSetRange = uiSetRange()
         self.uiSetRange.setupUi(self.dialog_SetRange)
 
+        self.dialog_addAnotherParams = qt.QDialog()
+        self.ui_addAnotherParams = uiAddAnotherParams()
+        self.ui_addAnotherParams.setupUi(self.dialog_addAnotherParams)
+
         self.tableview = qt.QDialog()
         self.uiTableView = ui_tableview()
         self.uiTableView.setupUi(self.tableview)
@@ -268,31 +281,31 @@ class MainWindow(qt.QMainWindow):
             num_of_collumn = self.TableW.currentColumn()
             menu = qt.QMenu()
             actionChangeSubscript = menu.addAction("Change Subscripts of this row")
-            # actionSetRange = menu.addAction("Guess with max and min")
+            actionSetRange = menu.addAction("Guess with max and min")
             action = menu.exec_(self.TableW.viewport().mapToGlobal(position))
             if action == actionChangeSubscript:
                 if self.TableW.item(num_of_row, 2).text() != 'EMPTY':
                     self.dialog_suffix.exec_()
-            # elif action == actionSetRange:
-            #     if self.TableW.item(num_of_row, 2).text() != 'EMPTY' and \
-            #         any([num_of_collumn == x for x in [5, 8, 11, 14,17] ]):
-            #         for term in ['lE_value', 'lE_min', 'lE_max']:
-            #             getattr(self.uiSetRange, term).clear()
-            #         self.uiSetRange.lE_value.setText(self.TableW.item(num_of_row, num_of_collumn).text())
-            #         combobox = self.TableW.cellWidget(num_of_row, num_of_collumn-1)
-            #         if ':' in self.TableW.item(num_of_row, num_of_collumn).text():
-            #             A = self.TableW.item(num_of_row, num_of_collumn).text().split(':')
-            #             self.uiSetRange.lE_value.setText(A[0])
-            #             l = ''
-            #             for term in A[1]:
-            #                 l += term
-            #             # l.replace('[','').replace(']','')
-            #             self.uiSetRange.lE_min.setText(l[1:-1].split(',')[0])
-            #             self.uiSetRange.lE_max.setText(l[1:-1].split(',')[1])
-            #         # print (combobox.currentText())
-            #         if combobox.currentIndex() !=0:
-            #             combobox.setCurrentIndex(3)
-            #         self.dialog_SetRange.exec_()
+            elif action == actionSetRange:
+                if self.TableW.item(num_of_row, 2).text() != 'EMPTY' and \
+                    any([num_of_collumn == x for x in [5, 8, 11, 14,17] ]):
+                    for term in ['lE_value', 'lE_min', 'lE_max']:
+                        getattr(self.uiSetRange, term).clear()
+                    self.uiSetRange.lE_value.setText(self.TableW.item(num_of_row, num_of_collumn).text())
+                    combobox = self.TableW.cellWidget(num_of_row, num_of_collumn-1)
+                    if ':' in self.TableW.item(num_of_row, num_of_collumn).text():
+                        A = self.TableW.item(num_of_row, num_of_collumn).text().split(':')
+                        self.uiSetRange.lE_value.setText(A[0])
+                        l = ''
+                        for term in A[1]:
+                            l += term
+                        # l.replace('[','').replace(']','')
+                        self.uiSetRange.lE_min.setText(l[1:-1].split(',')[0])
+                        self.uiSetRange.lE_max.setText(l[1:-1].split(',')[1])
+                    # print (combobox.currentText())
+                    if combobox.currentIndex() !=3:
+                        combobox.setCurrentIndex(3)
+                    self.dialog_SetRange.exec_()
 
         def change_suffix():
             num_of_row = self.TableW.currentRow()
@@ -309,13 +322,6 @@ class MainWindow(qt.QMainWindow):
             self.dialog_suffix.done(1)
 
         def guessWithRange():
-
-            def isfloat(value):
-                try:
-                    float(value)
-                    return True
-                except ValueError:
-                    return False
 
             num_of_row = self.TableW.currentRow()
             num_of_collumn = self.TableW.currentColumn()
@@ -348,6 +354,54 @@ class MainWindow(qt.QMainWindow):
         self.uiSetRange.pB_set.clicked.connect(guessWithRange)
 
         self.TableW.customContextMenuRequested.connect(openMenu)
+
+        def openMenu2():
+            for term in ['lE_value', 'lE_min', 'lE_max']:
+                getattr(self.ui_addAnotherParams, term).clear()
+            getattr(self.ui_addAnotherParams, 'lE_value').setText('0.0')
+            self.dialog_addAnotherParams.exec_()
+
+        def addAnotherParams():
+            txt = ''
+            if self.ui_addAnotherParams.lE_name.text():
+                txt += self.ui_addAnotherParams.lE_name.text()+'=['
+            else:
+                msgBox = qt.QMessageBox()
+                msgBox.setText("Error: you did not set the parameter name")
+                msgBox.exec_()
+                return
+            txt += self.ui_addAnotherParams.comBox_gsd.currentText()+','
+            if isfloat(self.ui_addAnotherParams.lE_value.text()):
+                txt += self.ui_addAnotherParams.lE_value.text() + ','
+            else:
+                msgBox = qt.QMessageBox()
+                msgBox.setText("Error: you did not give the parameter value")
+                msgBox.exec_()
+                return
+            if any([isfloat(self.ui_addAnotherParams.lE_min.text()) , isfloat(self.ui_addAnotherParams.lE_max.text())]):
+                if isfloat(self.ui_addAnotherParams.lE_min.text()):
+                    txt += '(' + self.ui_addAnotherParams.lE_min.text() + ':'
+                else:
+                    txt += '(' + ':'
+                if isfloat(self.ui_addAnotherParams.lE_max.text()):
+                    txt += self.ui_addAnotherParams.lE_max.text() + ')'
+                else:
+                    txt +=  ')'
+            else:
+                pass
+            txt +=']'
+            if self.uiTableView.lE_params.text() == '':
+                self.uiTableView.lE_params.insert(txt)
+            else:
+                self.uiTableView.lE_params.insert(';'+txt)
+
+        # self.uiTableView.lE_params.customContextMenuRequested.connect(openMenu2)
+
+
+        self.uiTableView.lE_params.addAction(self.uiTableView.actionAdd)
+        self.uiTableView.actionAdd.triggered.connect(openMenu2)
+
+        self.ui_addAnotherParams.pB_set.clicked.connect(addAnotherParams)
 
         self.TableW.setRowCount(20)
         self.TableW.setColumnCount(18)
@@ -465,7 +519,7 @@ class MainWindow(qt.QMainWindow):
                             self.TableW.item(pathn,3+3*['N','dE','dR','ss','C3'].index(term)+i).setForeground(qt.QColor('blue'))
                         elif i == 1:
                             comboBox = qt.QComboBox()
-                            comboBox.addItems(['guess','set','def','guess_wRange'])
+                            comboBox.addItems(['guess','set','def','guessR'])
                             if term == 'C3':
                                 comboBox.setCurrentIndex(1)
                             self.TableW.setCellWidget(pathn,3+3*['N','dE','dR','ss','C3'].index(term)+i,comboBox)
@@ -716,7 +770,7 @@ class MainWindow(qt.QMainWindow):
                     error = self.Reserver['delta('+param.text()+')']
                     i = A_params.index(param.text())
                     l = self.ax.errorbar(range(len(dat)),dat,yerr=error,
-                                     label=param.text(), marker='o', color=params.colors[i], markersize=10
+                                     label=param.text(), marker='o', color=params.colors[i%(len(params.colors))], markersize=10
                                      )
                     self.plotlines.append(l)
                     # plt.addCurve(range(1,len(datNames)+1),dat,legend=param.text(),
@@ -736,6 +790,7 @@ class MainWindow(qt.QMainWindow):
                 self.ax_r.autoscale_view()
                 self.ax.set_xticks(range(len(dat)))
                 self.ax.set_xticklabels(xticsLabels)
+                self.ax.get_yaxis().get_major_formatter().set_useOffset(False)
 
 
         def trendPlot_change_items():
@@ -769,7 +824,7 @@ class MainWindow(qt.QMainWindow):
                     t_array = term.split('=')
                     param_name = t_array[0].replace(" ", "")
                     param_condition = t_array[1][1:-1].replace(" ", "").replace('(', "").replace(')', "").split(',')
-                    setattr(fitParams, param_name, larchfit.guess(float(param_condition[0])))
+                    setattr(fitParams, param_name, larchfit.guess(float(param_condition[1])))
             feffpathlist = []
             for cB in self.GroupCheckBox.buttons():
                 if cB.isChecked():
@@ -782,6 +837,9 @@ class MainWindow(qt.QMainWindow):
                     Value_for_N = self.TableW.item(index_, 5).text()
                     if State_for_N.currentText() == 'def':
                         setattr(fitParams, Name_for_N, larchfit.param(expr=Value_for_N))
+                    elif State_for_N.currentText() == 'guessR':
+                        A = Value_for_N.split(':')
+                        setattr(fitParams, Name_for_N, larchfit.param(float(A[0])))
                     else:
                         setattr(fitParams, Name_for_N, larchfit.param(float(Value_for_N)))
 
@@ -792,6 +850,9 @@ class MainWindow(qt.QMainWindow):
                     Value_for_dE = self.TableW.item(index_, 8).text()
                     if State_for_dE.currentText() == 'def':
                         setattr(fitParams, Name_for_dE, larchfit.param(expr=Value_for_dE))
+                    elif State_for_dE.currentText() == 'guessR':
+                        A = Value_for_dE.split(':')
+                        setattr(fitParams, Name_for_dE, larchfit.param(float(A[0])))
                     else:
                         setattr(fitParams, Name_for_dE, larchfit.param(float(Value_for_dE)))
                     Name_for_dR = self.TableW.item(index_, 9).text()
@@ -799,6 +860,9 @@ class MainWindow(qt.QMainWindow):
                     Value_for_dR = self.TableW.item(index_, 11).text()
                     if State_for_dR.currentText() == 'def':
                         setattr(fitParams, Name_for_dR, larchfit.param(expr=Value_for_dR))
+                    elif State_for_dR.currentText() == 'guessR':
+                        A = Value_for_dR.split(':')
+                        setattr(fitParams, Name_for_dR, larchfit.param(float(A[0])))
                     else:
                         setattr(fitParams, Name_for_dR, larchfit.param(float(Value_for_dR)))
                     Name_for_ss = self.TableW.item(index_, 12).text()
@@ -806,6 +870,9 @@ class MainWindow(qt.QMainWindow):
                     Value_for_ss = self.TableW.item(index_, 14).text()
                     if State_for_ss.currentText() == 'def':
                         setattr(fitParams, Name_for_ss, larchfit.param(expr=Value_for_ss))
+                    elif State_for_ss.currentText() == 'guessR':
+                        A = Value_for_ss.split(':')
+                        setattr(fitParams, Name_for_dR, larchfit.param(float(A[0])))
                     else:
                         setattr(fitParams, Name_for_ss, larchfit.param(float(Value_for_ss)))
                     Name_for_C3 = self.TableW.item(index_, 15).text()
@@ -813,6 +880,9 @@ class MainWindow(qt.QMainWindow):
                     Value_for_C3 = self.TableW.item(index_, 17).text()
                     if State_for_C3.currentText() == 'def':
                         setattr(fitParams, Name_for_C3, larchfit.param(expr=Value_for_C3))
+                    elif State_for_C3.currentText() == 'guessR':
+                        A = Value_for_C3.split(':')
+                        setattr(fitParams, Name_for_C3, larchfit.param(float(A[0])))
                     else:
                         setattr(fitParams, Name_for_C3, larchfit.param(float(Value_for_C3)))
                     path.s02 = Name_for_N + '*' + 's0_2' + '/' + 'degen_path_' + str(index_)
@@ -969,8 +1039,8 @@ class MainWindow(qt.QMainWindow):
                         # self.TableW.item(i,num).setFont(self.font)
                         self.TableW.item(i,num).setForeground(qt.QColor('blue'))
                         comboBox = qt.QComboBox()
-                        comboBox.addItems(['guess','set','def','guess_wRange'])
-                        comboBox.setCurrentIndex(['guess','set','def','guess_wRange'].index(Dict[array_path[i]][term]['state']))
+                        comboBox.addItems(['guess','set','def','guessR'])
+                        comboBox.setCurrentIndex(['guess','set','def','guessR'].index(Dict[array_path[i]][term]['state']))
                         self.TableW.setCellWidget(i,num+1,comboBox)
                         self.TableW.setItem(i,num+2,qt.QTableWidgetItem(Dict[array_path[i]][term]['value']))
 
@@ -1204,27 +1274,27 @@ class MainWindow(qt.QMainWindow):
                             p_max = param_condition[2].split(':')[1]
                             if p_min != '' and p_max != '':
                                 setattr(self.fitParams, param_name,
-                                        larchfit.guess(float(param_condition[0]), min=float(p_min),
+                                        larchfit.guess(float(param_condition[1]), min=float(p_min),
                                                        max=float(p_max)))
                             elif p_min != '' and p_max == '':
-                                setattr(self.fitParams, param_name, larchfit.guess(float(param_condition[0]),
+                                setattr(self.fitParams, param_name, larchfit.guess(float(param_condition[1]),
                                                                                    min=float(p_min)))
                             elif p_min == '' and p_max != '':
-                                setattr(self.fitParams, param_name, larchfit.guess(float(param_condition[0]),
+                                setattr(self.fitParams, param_name, larchfit.guess(float(param_condition[1]),
                                                                                    min=float(p_max)))
                             else:
-                                setattr(self.fitParams, param_name, larchfit.guess(float(param_condition[0])))
+                                setattr(self.fitParams, param_name, larchfit.guess(float(param_condition[1])))
                             print(getattr(self.fitParams, param_name).value)
                             # self.extra_params.append(param_name)
                             # self.extra_params.append('delta(' + param_name + ')')
                         else:
-                            if param_condition[1].replace("'", "") == 'guess' and len(param_condition) == 2:
-                                setattr(self.fitParams, param_name, larchfit.guess(float(param_condition[0])))
+                            if param_condition[0].replace("'", "") == 'guess' and len(param_condition) == 2:
+                                setattr(self.fitParams, param_name, larchfit.guess(float(param_condition[1])))
                                 print(getattr(self.fitParams, param_name).value)
                                 # self.extra_params.append(param_name)
                                 # self.extra_params.append('delta(' + param_name + ')')
-                            elif param_condition[1].replace("'", "") == 'set':
-                                setattr(self.fitParams, param_name, larchfit.param(float(param_condition[0])))
+                            elif param_condition[0].replace("'", "") == 'set':
+                                setattr(self.fitParams, param_name, larchfit.param(float(param_condition[1])))
                                 # self.extra_params.append(param_name)
                 for cB in self.GroupCheckBox.buttons():
                     if cB.isChecked():
@@ -1297,7 +1367,7 @@ class MainWindow(qt.QMainWindow):
             for line in file:
                 print(line.rstrip().replace('"', ''))
             file.close()
-            targets = [x for x in self.paramNames[:-2] if not re.match(r"delta.*", x)]
+            targets = [x for x in self.paramNames[:-2] + self.extra_params[:] if not re.match(r"delta.*", x)]
             for i in range(len(targets)):
                 cb = qt.QListWidgetItem(targets[i])
                 self.uiform_data.listWidget_2.addItem(cb)
@@ -1422,26 +1492,26 @@ class MainWindow(qt.QMainWindow):
                             p_max = param_condition[2].split(':')[1]
                             if p_min != '' and p_max != '':
                                 setattr(self.fitParams, param_name,
-                                        larchfit.guess(float(param_condition[0]), min=float(p_min), max=float(p_max)))
+                                        larchfit.guess(float(param_condition[1]), min=float(p_min), max=float(p_max)))
                             elif p_min != '' and p_max == '':
-                                setattr(self.fitParams, param_name, larchfit.guess(float(param_condition[0]),
+                                setattr(self.fitParams, param_name, larchfit.guess(float(param_condition[1]),
                                                                                    min=float(p_min)))
                             elif p_min == '' and p_max != '':
-                                setattr(self.fitParams, param_name, larchfit.guess(float(param_condition[0]),
-                                                                                   min=float(p_max)))
+                                setattr(self.fitParams, param_name, larchfit.guess(float(param_condition[1]),
+                                                                                   max=float(p_max)))
                             else:
-                                setattr(self.fitParams, param_name, larchfit.guess(float(param_condition[0])))
+                                setattr(self.fitParams, param_name, larchfit.guess(float(param_condition[1])))
                             print(getattr(self.fitParams, param_name).value)
                             self.extra_params.append(param_name)
                             self.extra_params.append('delta(' + param_name + ')')
                         else:
-                            if param_condition[1].replace("'", "") == 'guess' and len(param_condition) == 2:
-                                setattr(self.fitParams, param_name, larchfit.guess(float(param_condition[0])))
+                            if param_condition[0].replace("'", "") == 'guess' and len(param_condition) == 2:
+                                setattr(self.fitParams, param_name, larchfit.guess(float(param_condition[1])))
                                 print(getattr(self.fitParams, param_name).value)
                                 self.extra_params.append(param_name)
                                 self.extra_params.append('delta(' + param_name + ')')
-                            elif param_condition[1].replace("'", "") == 'set':
-                                setattr(self.fitParams, param_name, larchfit.param(float(param_condition[0])))
+                            elif param_condition[0].replace("'", "") == 'set':
+                                setattr(self.fitParams, param_name, larchfit.param(float(param_condition[1])))
                                 self.extra_params.append(param_name)
                                 self.extra_params.append('delta(' + param_name + ')')
                 # print(self.extra_params)
@@ -1475,6 +1545,34 @@ class MainWindow(qt.QMainWindow):
                         elif State_for_N.currentText() == 'def':
                             setattr(self.fitParams, Name_for_N, larchfit.param(expr=Value_for_N))
                             self.paramNames += [Name_for_N, 'delta(' + Name_for_N + ')']
+                        elif State_for_N.currentText() == 'guessR':
+                            A = Value_for_N.split(':')
+                            # val = float(A[0])
+                            print (A[1])
+                            l = ''
+                            for term in A[1][1:-1]:
+                                l += term
+                            print (l)
+                            if isfloat(A[0]) and isfloat(l.split(',')[0]) and isfloat(l.split(',')[1]):
+                                setattr(self.fitParams, Name_for_N, larchfit.guess(float(A[0]), min=float(l.split(',')[0]), max=float(l.split(',')[1])))
+                                self.paramNames += [Name_for_N, 'delta(' + Name_for_N + ')']
+                            elif isfloat(A[0]) and isfloat(l.split(',')[0]) and not isfloat(l.split(',')[1]):
+                                setattr(self.fitParams, Name_for_N, larchfit.guess(float(A[0]), min=float(l.split(',')[0])))
+                                self.paramNames += [Name_for_N, 'delta(' + Name_for_N + ')']
+                            elif isfloat(A[0]) and not isfloat(l.split(',')[0]) and isfloat(l.split(',')[1]):
+                                setattr(self.fitParams, Name_for_N, larchfit.guess(float(A[0]), max=float(l.split(',')[1])))
+                                self.paramNames += [Name_for_N, 'delta(' + Name_for_N + ')']
+                            else:
+                                msgBox = qt.QMessageBox()
+                                msgBox.setText("Error: There is a problem in parameter N.")
+                                msgBox.exec_()
+                                return
+
+                            # vmin = float(l.split(',')[0])
+                            # vmax= float(l.split(',')[1])
+                            setattr(self.fitParams, Name_for_N, larchfit.guess(float(A[0])))
+                            # larchfit.guess(float(param_condition[0]), min=float(p_min), max=float(p_max))
+
                         setattr(self.fitParams, 'degen_path_' + str(index_), path.degen)
                         # setattr(self.fitParams,'net_'+Name_for_N,larchfit.param(expr=Value_for_N+'*'+str(self.fit_dialog.doubleSpinBox.value())))
                         Name_for_dE = self.TableW.item(index_, 6).text()
@@ -1490,6 +1588,30 @@ class MainWindow(qt.QMainWindow):
                         elif State_for_dE.currentText() == 'def':
                             setattr(self.fitParams, Name_for_dE, larchfit.param(expr=Value_for_dE))
                             self.paramNames += [Name_for_dE, 'delta(' + Name_for_dE + ')']
+                        elif State_for_dE.currentText() == 'guessR':
+                            A = Value_for_dE.split(':')
+                            # val = float(A[0])
+                            l = ''
+                            for term in A[1][1:-1]:
+                                l += term
+                            if isfloat(A[0]) and isfloat(l.split(',')[0]) and isfloat(l.split(',')[1]):
+                                setattr(self.fitParams, Name_for_dE,
+                                        larchfit.guess(float(A[0]), min=float(l.split(',')[0]),
+                                                       max=float(l.split(',')[1])))
+                                self.paramNames += [Name_for_dE, 'delta(' + Name_for_dE + ')']
+                            elif isfloat(A[0]) and isfloat(l.split(',')[0]) and not isfloat(l.split(',')[1]):
+                                setattr(self.fitParams, Name_for_dE,
+                                        larchfit.guess(float(A[0]), min=float(l.split(',')[0])))
+                                self.paramNames += [Name_for_dE, 'delta(' + Name_for_dE + ')']
+                            elif isfloat(A[0]) and not isfloat(l.split(',')[0]) and isfloat(l.split(',')[1]):
+                                setattr(self.fitParams, Name_for_dE,
+                                        larchfit.guess(float(A[0]), max=float(l.split(',')[1])))
+                                self.paramNames += [Name_for_dE, 'delta(' + Name_for_dE + ')']
+                            else:
+                                msgBox = qt.QMessageBox()
+                                msgBox.setText("Error: There is a problem in parameter dE.")
+                                msgBox.exec_()
+                                return
                         Name_for_dR = self.TableW.item(index_, 9).text()
                         self.params_for_dR.append(Name_for_dR)
                         State_for_dR = self.TableW.cellWidget(index_, 10)
@@ -1509,6 +1631,36 @@ class MainWindow(qt.QMainWindow):
                             self.paramNames += ['Ro_'+str(index_+1)+'+'+Name_for_dR,
                                                 'delta(' + 'Ro_'+str(index_+1)+'+'+Name_for_dR + ')', Name_for_dR,
                                                 'delta(' + Name_for_dR + ')']
+                        elif State_for_dR.currentText() == 'guessR':
+                            A = Value_for_dR.split(':')
+                            # val = float(A[0])
+                            l = ''
+                            for term in A[1][1:-1]:
+                                l += term
+                            if isfloat(A[0]) and isfloat(l.split(',')[0]) and isfloat(l.split(',')[1]):
+                                setattr(self.fitParams, Name_for_dR,
+                                        larchfit.guess(float(A[0]), min=float(l.split(',')[0]),
+                                                       max=float(l.split(',')[1])))
+                                self.paramNames += ['Ro_' + str(index_ + 1) + '+' + Name_for_dR,
+                                                    'delta(' + 'Ro_' + str(index_ + 1) + '+' + Name_for_dR + ')',
+                                                    Name_for_dR,'delta(' + Name_for_dR + ')']
+                            elif isfloat(A[0]) and isfloat(l.split(',')[0]) and not isfloat(l.split(',')[1]):
+                                setattr(self.fitParams, Name_for_dR,
+                                        larchfit.guess(float(A[0]), min=float(l.split(',')[0])))
+                                self.paramNames += ['Ro_' + str(index_ + 1) + '+' + Name_for_dR,
+                                                    'delta(' + 'Ro_' + str(index_ + 1) + '+' + Name_for_dR + ')',
+                                                    Name_for_dR,'delta(' + Name_for_dR + ')']
+                            elif isfloat(A[0]) and not isfloat(l.split(',')[0]) and isfloat(l.split(',')[1]):
+                                setattr(self.fitParams, Name_for_dR,
+                                        larchfit.guess(float(A[0]), max=float(l.split(',')[1])))
+                                self.paramNames += ['Ro_' + str(index_ + 1) + '+' + Name_for_dR,
+                                                    'delta(' + 'Ro_' + str(index_ + 1) + '+' + Name_for_dR + ')',
+                                                    Name_for_dR,'delta(' + Name_for_dR + ')']
+                            else:
+                                msgBox = qt.QMessageBox()
+                                msgBox.setText("Error: There is a problem in parameter dR.")
+                                msgBox.exec_()
+                                return
                         Name_for_ss = self.TableW.item(index_, 12).text()
                         self.params_for_ss.append(Name_for_ss)
                         State_for_ss = self.TableW.cellWidget(index_, 13)
@@ -1522,6 +1674,30 @@ class MainWindow(qt.QMainWindow):
                         elif State_for_ss.currentText() == 'def':
                             setattr(self.fitParams, Name_for_ss, larchfit.param(expr=Value_for_ss))
                             self.paramNames += [Name_for_ss, 'delta(' + Name_for_ss + ')']
+                        elif State_for_ss.currentText() == 'guessR':
+                            A = Value_for_ss.split(':')
+                            # val = float(A[0])
+                            l = ''
+                            for term in A[1][1:-1]:
+                                l += term
+                            if isfloat(A[0]) and isfloat(l.split(',')[0]) and isfloat(l.split(',')[1]):
+                                setattr(self.fitParams, Name_for_ss,
+                                        larchfit.guess(float(A[0]), min=float(l.split(',')[0]),
+                                                       max=float(l.split(',')[1])))
+                                self.paramNames += [Name_for_ss, 'delta(' + Name_for_ss + ')']
+                            elif isfloat(A[0]) and isfloat(l.split(',')[0]) and not isfloat(l.split(',')[1]):
+                                setattr(self.fitParams, Name_for_ss,
+                                        larchfit.guess(float(A[0]), min=float(l.split(',')[0])))
+                                self.paramNames += [Name_for_ss, 'delta(' + Name_for_ss + ')']
+                            elif isfloat(A[0]) and not isfloat(l.split(',')[0]) and isfloat(l.split(',')[1]):
+                                setattr(self.fitParams, Name_for_ss,
+                                        larchfit.guess(float(A[0]), max=float(l.split(',')[1])))
+                                self.paramNames += [Name_for_ss, 'delta(' + Name_for_ss + ')']
+                            else:
+                                msgBox = qt.QMessageBox()
+                                msgBox.setText("Error: There is a problem in parameter dE.")
+                                msgBox.exec_()
+                                return
                         Name_for_C3 = self.TableW.item(index_, 15).text()
                         self.params_for_C3.append(Name_for_C3)
                         State_for_C3 = self.TableW.cellWidget(index_, 16)
@@ -1535,6 +1711,31 @@ class MainWindow(qt.QMainWindow):
                         elif State_for_C3.currentText() == 'def':
                             setattr(self.fitParams, Name_for_C3, larchfit.param(expr=Value_for_C3))
                             self.paramNames += [Name_for_C3, 'delta(' + Name_for_C3 + ')']
+                        elif State_for_C3.currentText() == 'guessR':
+                            A = Value_for_C3.split(':')
+                            # val = float(A[0])
+                            l = ''
+                            for term in A[1][1:-1]:
+                                l += term
+                            if isfloat(A[0]) and isfloat(l.split(',')[0]) and isfloat(l.split(',')[1]):
+                                setattr(self.fitParams, Name_for_C3,
+                                        larchfit.guess(float(A[0]), min=float(l.split(',')[0]),
+                                                       max=float(l.split(',')[1])))
+                                self.paramNames += [Name_for_C3, 'delta(' + Name_for_C3 + ')']
+                            elif isfloat(A[0]) and isfloat(l.split(',')[0]) and not isfloat(l.split(',')[1]):
+                                setattr(self.fitParams, Name_for_C3,
+                                        larchfit.guess(float(A[0]), min=float(l.split(',')[0])))
+                                self.paramNames += [Name_for_C3, 'delta(' + Name_for_C3 + ')']
+                            elif isfloat(A[0]) and not isfloat(l.split(',')[0]) and isfloat(l.split(',')[1]):
+                                setattr(self.fitParams, Name_for_C3,
+                                        larchfit.guess(float(A[0]), max=float(l.split(',')[1])))
+                                self.paramNames += [Name_for_C3, 'delta(' + Name_for_C3 + ')']
+                            else:
+                                msgBox = qt.QMessageBox()
+                                msgBox.setText("Error: There is a problem in parameter dE.")
+                                msgBox.exec_()
+                                return
+
                         path.s02 = Name_for_N + '*' + 's0_2' + '/' + 'degen_path_' + str(index_)
                         path.e0 = Name_for_dE
                         path.sigma2 = Name_for_ss
