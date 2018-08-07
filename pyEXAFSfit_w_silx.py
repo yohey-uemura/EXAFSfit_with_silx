@@ -268,31 +268,31 @@ class MainWindow(qt.QMainWindow):
             num_of_collumn = self.TableW.currentColumn()
             menu = qt.QMenu()
             actionChangeSubscript = menu.addAction("Change Subscripts of this row")
-            actionSetRange = menu.addAction("Guess with max and min")
+            # actionSetRange = menu.addAction("Guess with max and min")
             action = menu.exec_(self.TableW.viewport().mapToGlobal(position))
             if action == actionChangeSubscript:
                 if self.TableW.item(num_of_row, 2).text() != 'EMPTY':
                     self.dialog_suffix.exec_()
-            elif action == actionSetRange:
-                if self.TableW.item(num_of_row, 2).text() != 'EMPTY' and \
-                    any([num_of_collumn == x for x in [5, 8, 11, 14,17] ]):
-                    for term in ['lE_value', 'lE_min', 'lE_max']:
-                        getattr(self.uiSetRange, term).clear()
-                    self.uiSetRange.lE_value.setText(self.TableW.item(num_of_row, num_of_collumn).text())
-                    combobox = self.TableW.cellWidget(num_of_row, num_of_collumn-1)
-                    if ':' in self.TableW.item(num_of_row, num_of_collumn).text():
-                        A = self.TableW.item(num_of_row, num_of_collumn).text().split(':')
-                        self.uiSetRange.lE_value.setText(A[0])
-                        l = ''
-                        for term in A[1]:
-                            l += term
-                        # l.replace('[','').replace(']','')
-                        self.uiSetRange.lE_min.setText(l[1:-1].split(',')[0])
-                        self.uiSetRange.lE_max.setText(l[1:-1].split(',')[1])
-                    # print (combobox.currentText())
-                    if combobox.currentIndex() !=0:
-                        combobox.setCurrentIndex(3)
-                    self.dialog_SetRange.exec_()
+            # elif action == actionSetRange:
+            #     if self.TableW.item(num_of_row, 2).text() != 'EMPTY' and \
+            #         any([num_of_collumn == x for x in [5, 8, 11, 14,17] ]):
+            #         for term in ['lE_value', 'lE_min', 'lE_max']:
+            #             getattr(self.uiSetRange, term).clear()
+            #         self.uiSetRange.lE_value.setText(self.TableW.item(num_of_row, num_of_collumn).text())
+            #         combobox = self.TableW.cellWidget(num_of_row, num_of_collumn-1)
+            #         if ':' in self.TableW.item(num_of_row, num_of_collumn).text():
+            #             A = self.TableW.item(num_of_row, num_of_collumn).text().split(':')
+            #             self.uiSetRange.lE_value.setText(A[0])
+            #             l = ''
+            #             for term in A[1]:
+            #                 l += term
+            #             # l.replace('[','').replace(']','')
+            #             self.uiSetRange.lE_min.setText(l[1:-1].split(',')[0])
+            #             self.uiSetRange.lE_max.setText(l[1:-1].split(',')[1])
+            #         # print (combobox.currentText())
+            #         if combobox.currentIndex() !=0:
+            #             combobox.setCurrentIndex(3)
+            #         self.dialog_SetRange.exec_()
 
         def change_suffix():
             num_of_row = self.TableW.currentRow()
