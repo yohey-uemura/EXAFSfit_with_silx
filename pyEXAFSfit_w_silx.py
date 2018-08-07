@@ -348,8 +348,6 @@ class MainWindow(qt.QMainWindow):
 
             self.dialog_SetRange.done(1)
 
-
-
         self.suffix_d.pushButton.clicked.connect(change_suffix)
         self.uiSetRange.pB_set.clicked.connect(guessWithRange)
 
@@ -394,6 +392,7 @@ class MainWindow(qt.QMainWindow):
                 self.uiTableView.lE_params.insert(txt)
             else:
                 self.uiTableView.lE_params.insert(';'+txt)
+            self.dialog_addAnotherParams.done(1)
 
         # self.uiTableView.lE_params.customContextMenuRequested.connect(openMenu2)
 
