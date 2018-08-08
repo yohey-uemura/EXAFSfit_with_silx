@@ -598,8 +598,8 @@ class MainWindow(qt.QMainWindow):
 
             r, chir, chir_mag, chir_im = LarchF.calcFT(k, chi, kweight,
                                                        k_min, k_max, wind, dk_wind)
-            kwindow = LarchF.calcFTwindow(k, k_min, k_max, dk_wind, wind)
-            rwindow = LarchF.calcFTwindow(r, r_min, r_max, dr_wind, wind)
+            # kwindow = LarchF.calcFTwindow(k, k_min, k_max, dk_wind, wind)
+            # rwindow = LarchF.calcFTwindow(r, r_min, r_max, dr_wind, wind)
             q, chi_q = LarchF.calc_rFT(r, chir, r_min, r_max,
                                        k_max + 2.0, wind, dr_wind)
             if self.uiform_ctrl.rB_plot_k.isChecked():
@@ -710,8 +710,14 @@ class MainWindow(qt.QMainWindow):
                     ymin, ymax = plt.getGraphYLimits()
                     l = plt.getAllCurves()[0]
                     # x = np.arange(xmin,xmax,0.05)
+                    # x = l.getData()[0]
+                    xt = np.arange(l.getData()[0][0],l.getData()[0][-1],0.05)
+                    # print (x)
+                    # print (k_min)
+                    # print(k_max)
+                    FTwindowt = LarchF.calcFTwindow(xt,k_min,k_max,dk_wind,wind)
                     x = l.getData()[0]
-                    FTwindow = LarchF.calcFTwindow(x,k_min,k_max,dr_wind,wind)
+                    FTwindow = np.interp(x,xt,FTwindowt)
                     plt.addCurve(x,FTwindow*ymax*1.05,legend="window",
                                  linewidth=1.5,color=params.dict_color["DarkGreen"])
                     plt.setGraphXLimits(0, 16.0)
@@ -723,8 +729,11 @@ class MainWindow(qt.QMainWindow):
                     ymin, ymax = plt.getGraphYLimits()
                     l = plt.getAllCurves()[0]
                     # x = np.arange(xmin,xmax,0.05)
+                    # x = l.getData()[0]
+                    xt = np.arange(l.getData()[0][0], l.getData()[0][-1], 0.05)
+                    FTwindowt = LarchF.calcFTwindow(xt,r_min,r_max,dr_wind,wind)
                     x = l.getData()[0]
-                    FTwindow = LarchF.calcFTwindow(x,r_min,r_max,dr_wind,wind)
+                    FTwindow = np.interp(x, xt, FTwindowt)
                     plt.addCurve(x,FTwindow*ymax*1.05,legend="window",
                                  linewidth=1.5, color=params.dict_color["DarkGreen"])
                     plt.setGraphXLimits(0, 6)
@@ -737,8 +746,11 @@ class MainWindow(qt.QMainWindow):
                     ymin, ymax = plt.getGraphYLimits()
                     l = plt.getAllCurves()[0]
                     # x = np.arange(xmin,xmax,0.05)
+                    # x = l.getData()[0]
+                    xt = np.arange(l.getData()[0][0], l.getData()[0][-1], 0.05)
+                    FTwindowt = LarchF.calcFTwindow(xt, k_min, k_max, dk_wind, wind)
                     x = l.getData()[0]
-                    FTwindow = LarchF.calcFTwindow(x, k_min, k_max, dk_wind, wind)
+                    FTwindow = np.interp(x, xt, FTwindowt)
                     plt.addCurve(x, FTwindow * ymax * 1.05, legend="window",
                                  linewidth=1.5,color=params.dict_color["DarkGreen"])
                     plt.setGraphXLimits(0, 16.0)
