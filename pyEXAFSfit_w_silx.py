@@ -20,7 +20,7 @@ import fileinput
 import re
 import use_larch as LarchF
 import larch
-from larch_plugins.xafs import autobk, xftf, xftr, feffit, _ff2chi, feffrunner
+from larch_plugins.xafs import autobk, xftf, xftr, feffit, feffrunner
 from larch_plugins.xafs.feffit import feffit_transform, feffit_dataset, feffit_report
 from larch_plugins.xafs.feffdat import feffpath
 from larch_plugins.io import read_ascii
