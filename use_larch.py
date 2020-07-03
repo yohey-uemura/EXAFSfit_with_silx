@@ -427,7 +427,7 @@ def read_FEFF(path_to_feff):
         else:
             df = pandas.read_csv(list_file,delim_whitespace=True,skiprows=3,names=rNames)
         #print len(df['amp ratio'].as_matrix())
-        for i in range(0,len(df['amp ratio'].as_matrix())):
+        for i in range(0,len(df['amp ratio'].values)):
             #print df['amp ratio'][i]
             txt_array['path_'+str(df['pathindex'][i])] += "{:16s}".format(str(df['amp ratio'][i])) + "{:16s}".format(str(df['deg'][i]))
         return txt_array
