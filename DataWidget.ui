@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>320</width>
+    <width>325</width>
     <height>700</height>
    </rect>
   </property>
@@ -50,9 +50,9 @@
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>50</y>
+       <y>80</y>
        <width>260</width>
-       <height>331</height>
+       <height>301</height>
       </rect>
      </property>
     </widget>
@@ -97,16 +97,16 @@
     <widget class="QCheckBox" name="cB_ploteach">
      <property name="geometry">
       <rect>
-       <x>150</x>
-       <y>0</y>
+       <x>10</x>
+       <y>40</y>
        <width>120</width>
-       <height>40</height>
+       <height>31</height>
       </rect>
      </property>
      <property name="minimumSize">
       <size>
        <width>120</width>
-       <height>40</height>
+       <height>30</height>
       </size>
      </property>
      <property name="text">
@@ -118,13 +118,13 @@
       <rect>
        <x>0</x>
        <y>0</y>
-       <width>120</width>
+       <width>100</width>
        <height>40</height>
       </rect>
      </property>
      <property name="minimumSize">
       <size>
-       <width>120</width>
+       <width>100</width>
        <height>40</height>
       </size>
      </property>
@@ -179,6 +179,57 @@ color: rgb(252, 1, 7);</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="pB_Open_athena">
+     <property name="geometry">
+      <rect>
+       <x>100</x>
+       <y>0</y>
+       <width>120</width>
+       <height>40</height>
+      </rect>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>120</width>
+       <height>40</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>160</width>
+       <height>40</height>
+      </size>
+     </property>
+     <property name="text">
+      <string>Open Athena</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="pB_refresh">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <property name="geometry">
+      <rect>
+       <x>230</x>
+       <y>0</y>
+       <width>40</width>
+       <height>40</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset>
+       <normaloff>reload.png</normaloff>reload.png</iconset>
+     </property>
+     <property name="iconSize">
+      <size>
+       <width>20</width>
+       <height>20</height>
+      </size>
      </property>
     </widget>
    </widget>

@@ -2,16 +2,18 @@
 
 # Form implementation generated from reading ui file 'DataWidget.ui'
 #
-# Created by: PyQt5 UI code generator 5.11.2
+# Created by: PyQt5 UI code generator 5.14.2
 #
 # WARNING! All changes made in this file will be lost!
 
+
 from PyQt5 import QtCore, QtGui, QtWidgets
+
 
 class Ui_Form(object):
     def setupUi(self, Form):
         Form.setObjectName("Form")
-        Form.resize(320, 700)
+        Form.resize(325, 700)
         self.toolBox = QtWidgets.QToolBox(Form)
         self.toolBox.setGeometry(QtCore.QRect(20, 30, 280, 621))
         self.toolBox.setToolTip("")
@@ -22,7 +24,7 @@ class Ui_Form(object):
         self.page_3.setGeometry(QtCore.QRect(0, 0, 280, 559))
         self.page_3.setObjectName("page_3")
         self.listWidget = QtWidgets.QListWidget(self.page_3)
-        self.listWidget.setGeometry(QtCore.QRect(10, 50, 260, 331))
+        self.listWidget.setGeometry(QtCore.QRect(10, 80, 260, 301))
         self.listWidget.setObjectName("listWidget")
         self.progressBar = QtWidgets.QProgressBar(self.page_3)
         self.progressBar.setGeometry(QtCore.QRect(10, 460, 260, 40))
@@ -34,12 +36,12 @@ class Ui_Form(object):
         self.cB_use_previous.setMinimumSize(QtCore.QSize(120, 30))
         self.cB_use_previous.setObjectName("cB_use_previous")
         self.cB_ploteach = QtWidgets.QCheckBox(self.page_3)
-        self.cB_ploteach.setGeometry(QtCore.QRect(150, 0, 120, 40))
-        self.cB_ploteach.setMinimumSize(QtCore.QSize(120, 40))
+        self.cB_ploteach.setGeometry(QtCore.QRect(10, 40, 120, 31))
+        self.cB_ploteach.setMinimumSize(QtCore.QSize(120, 30))
         self.cB_ploteach.setObjectName("cB_ploteach")
         self.pB_Open = QtWidgets.QPushButton(self.page_3)
-        self.pB_Open.setGeometry(QtCore.QRect(0, 0, 120, 40))
-        self.pB_Open.setMinimumSize(QtCore.QSize(120, 40))
+        self.pB_Open.setGeometry(QtCore.QRect(0, 0, 100, 40))
+        self.pB_Open.setMinimumSize(QtCore.QSize(100, 40))
         self.pB_Open.setMaximumSize(QtCore.QSize(160, 40))
         self.pB_Open.setObjectName("pB_Open")
         self.lineEdit = QtWidgets.QLineEdit(self.page_3)
@@ -57,6 +59,20 @@ class Ui_Form(object):
         self.label.setGeometry(QtCore.QRect(10, 390, 171, 30))
         self.label.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
         self.label.setObjectName("label")
+        self.pB_Open_athena = QtWidgets.QPushButton(self.page_3)
+        self.pB_Open_athena.setGeometry(QtCore.QRect(100, 0, 120, 40))
+        self.pB_Open_athena.setMinimumSize(QtCore.QSize(120, 40))
+        self.pB_Open_athena.setMaximumSize(QtCore.QSize(160, 40))
+        self.pB_Open_athena.setObjectName("pB_Open_athena")
+        self.pB_refresh = QtWidgets.QPushButton(self.page_3)
+        self.pB_refresh.setEnabled(False)
+        self.pB_refresh.setGeometry(QtCore.QRect(230, 0, 40, 40))
+        self.pB_refresh.setText("")
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("reload.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.pB_refresh.setIcon(icon)
+        self.pB_refresh.setIconSize(QtCore.QSize(20, 20))
+        self.pB_refresh.setObjectName("pB_refresh")
         self.toolBox.addItem(self.page_3, "")
         self.page_4 = QtWidgets.QWidget()
         self.page_4.setGeometry(QtCore.QRect(0, 0, 280, 559))
@@ -82,7 +98,7 @@ class Ui_Form(object):
         self.pB_Open.setText(_translate("Form", "Open data"))
         self.lineEdit.setText(_translate("Form", "ALL"))
         self.label.setText(_translate("Form", "Fit Data(ex: 1-3,5,6 or \'ALL\')"))
+        self.pB_Open_athena.setText(_translate("Form", "Open Athena"))
         self.toolBox.setItemText(self.toolBox.indexOf(self.page_3), _translate("Form", "EXAFS Data"))
         self.show_TableView.setText(_translate("Form", "Table View"))
         self.toolBox.setItemText(self.toolBox.indexOf(self.page_4), _translate("Form", "Fit Results"))
-

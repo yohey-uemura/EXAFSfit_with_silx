@@ -956,14 +956,22 @@ class MainWindow(qt.QMainWindow):
                                                   dr_wind)
                 plt.addCurve(q_fit, chiq_fit,
                              linestyle='--', color=params.dict_color["Red"], legend='model',linewidth=1.5)
-
-        def openFiles():
+        def refreshdata():
             while self.uiform_data.listWidget.count():
                 item = self.uiform_data.listWidget.takeItem(0)
                 del item
+                
+        def openFiles():
+            # while self.uiform_data.listWidget.count():
+            #     item = self.uiform_data.listWidget.takeItem(0)
+            #     del item
+            #self.dbbox = qt.QDialogButtonBox()
+            #self.dbbox.show()
+            refreshdata()
             files, self.datdir = dialog_for_OpenFiles(params.dir,
                                                      'Open chi files',
-                                                     "chi files(*.xi *.chi *chik *.rex)")
+                                                    "chi files(*.xi *.chi *chik);;REX files (*.rex)")
+                                                     #"chi files(*.xi *.chi *chik *.rex)")
             if files:
                 for i in range(len(files)):
                     f = natsort.natsorted(files)[i]
@@ -973,8 +981,80 @@ class MainWindow(qt.QMainWindow):
                     self.uiform_data.listWidget.addItem(cb)
                 self.uiform_data.listWidget.setCurrentRow(0)
             self.wSignal.emit()
+
+        class Athena_MessageBox(qt.QMessageBox):
+            def __init__(self, l, *args, **kwargs):
+                qt.QMessageBox.__init__(self, *args, **kwargs)
+                scroll = qt.QScrollArea(self)
+                scroll.setWidgetResizable(True)
+                self.content = qt.QListWidget()
+                scroll.setWidget(self.content)
+                #lay = qt.QVBoxLayout(self.content)
+                for i in range(len(l)):
+                    item = l[i]
+                    cb = qt.QListWidgetItem(str(i + 1) + ':' + item)
+                    # lay.addWidget(cb)
+                    self.content.addItem(cb)
+                    #self.content.addWidget(QLabel(item, self))
+                self.content.setSelectionMode(qt.QAbstractItemView.MultiSelection)
+                self.layout().addWidget(scroll, 0, 0, 1, self.layout().columnCount())
+                self.setStyleSheet("QScrollArea{min-width:300 px; min-height: 200px}")
+
+            
+        def openAthenaFile():
+            refreshdata()
+            dat_dir = params.dir
+            if dat_dir == "":
+                dat_dir = os.environ[params.homestr]
+            # elif dat_dir != "":
+            #     dat_dir = dir
+            # while self.uiform_data.listWidget.count():
+            #     item = self.uiform_data.listWidget.takeItem(0)
+            #     del item
+            #self.dbbox = qt.QDialogButtonBox()
+            #self.dbbox.show()
+            FO_dialog = qt.QFileDialog()
+            files = FO_dialog.getOpenFileName(self, "Open Athena File",
+                                              dat_dir,
+                                              "Athena File (*.prj)")
+            # files, self.datdir = dialog_for_OpenFiles(params.dir,
+            #                                          'Open chi files',
+            #                                         "chi files(*.xi *.chi *chik);;REX files (*.rex)")
+            #                                          #"chi files(*.xi *.chi *chik *.rex)")
+            #print (files)
+            if os.path.isfile(files[0]):
+                self.datdir, datgroup = LarchF.read_athena_binary(files[0])
+                msg = Athena_MessageBox(datgroup)
+                msg.setWindowTitle("Choose Data File")
+                # for i in range(len(datgroup)):
+                #     cb = qt.QListWidgetItem(str(i + 1) + ':' + datgroup[i])
+                #     msg.content.addItem(cb)
+                msg.exec_()
+                if msg.content.selectedItems():
+                    arr_ = msg.content.selectedItems()
+                    for i in range(len(arr_)):
+                        f = arr_[i].text().split(':')[1]
+                        cb = qt.QListWidgetItem(str(i + 1) + ':' + arr_[i].text().split(':')[1]+'.chi')
+                        #cb.setObjectName(datdir+'/'+f+'.chi')
+                        self.uiform_data.listWidget.addItem(cb)
+                    self.uiform_data.listWidget.setCurrentRow(0)
+                    self.wSignal.emit()
+                        
+            #     for i in range(len(files)):
+            #         f = natsort.natsorted(files)[i]
+            #         cb = qt.QListWidgetItem(str(i + 1) + ':' + os.path.basename(f))
+            #         # cb = qt.QCheckBox(str(i + 1) + ':' + os.path.basename(f))
+            #         # cb.setObjectName(os.path.abspath(f))
+            #         self.uiform_data.listWidget.addItem(cb)
+            #     self.uiform_data.listWidget.setCurrentRow(0)
+            # self.wSignal.emit()
             # print (self.uiform_data.listWidget.count())
 
+        def refreshdata():
+            while self.uiform_data.listWidget.count():
+                item = self.uiform_data.listWidget.takeItem(0)
+                del item
+            
         def changeSelectionMode():
             if  self.uiform_data.cB_ploteach.isChecked():
                 self.uiform_data.listWidget.setSelectionMode(qt.QAbstractItemView.SingleSelection)
@@ -1086,6 +1166,8 @@ class MainWindow(qt.QMainWindow):
                 trendPlot_change_items()
 
         self.uiform_data.pB_Open.clicked.connect(openFiles)
+        self.uiform_data.pB_Open_athena.clicked.connect(openAthenaFile)
+        self.uiform_data.pB_refresh.clicked.connect(refreshdata)
         self.uiform_data.cB_ploteach.toggled.connect(changeSelectionMode)
         self.uiform_data.listWidget.itemClicked.connect(plotData)
         for name_rb in ['k','r','q']:
@@ -1152,23 +1234,58 @@ class MainWindow(qt.QMainWindow):
                     self.Reserver.loc[cb.text(), term] = line
                 else:
                     if getattr(self.fitParams, term).vary == True:
-                        if getattr(self.fitParams, term).uvalue is None:
-                            if term in self.params_for_dR:
-                                for i in range(0, 20):
-                                    if term == self.TableW.item(i, 9).text():
-                                        # print self.TableW.item(i,9).text()
-                                        print(self.TableW.item(i, 2).text())
-                                        self.Reserver.loc[cb.text(), 'Ro_'+str(i+1)+'+'+term] = getattr(self.fitParams, term).value +\
+                        #print (term)
+                        try:
+                            bool = getattr(self.fitParams, term).uvalue
+                            if bool is None:
+                                if term in self.params_for_dR:
+                                    for i in range(0, 20):
+                                        if term == self.TableW.item(i, 9).text():
+                                            # print self.TableW.item(i,9).text()
+                                            print(self.TableW.item(i, 2).text())
+                                            self.Reserver.loc[cb.text(), 'Ro_'+str(i+1)+'+'+term] = getattr(self.fitParams, term).value +\
                                                                              float(re.search("\w+\=(\d+\.\d+)", self.TableW.item(i, 2).text()).group(1))
-                                        self.Reserver.loc[cb.text(), term] = getattr(self.fitParams, term).value
-                                        break
-                                self.Reserver.loc[cb.text(), 'delta(' + term + ')'] = 0.000
-                                self.Reserver.loc[cb.text(), 'delta(' + 'Ro_'+str(i+1)+'+'+term + ')'] = 0.000
+                                            self.Reserver.loc[cb.text(), term] = getattr(self.fitParams, term).value
+                                            break
+                                    self.Reserver.loc[cb.text(), 'delta(' + term + ')'] = 0.000
+                                    self.Reserver.loc[cb.text(), 'delta(' + 'Ro_'+str(i+1)+'+'+term + ')'] = 0.000
+                                    # self.Reserver.loc[key,term] = str(getattr(self.fitParams,term).value)
+                                else:
+                                     self.Reserver.loc[cb.text(), term] = getattr(self.fitParams, term).value
+                                     self.Reserver.loc[cb.text(), 'delta(' + term + ')'] = 0.000
+                        except AttributeError:
+                            if term in self.params_for_dR:
+                                    for i in range(0, 20):
+                                        if term == self.TableW.item(i, 9).text():
+                                            # print self.TableW.item(i,9).text()
+                                            print(self.TableW.item(i, 2).text())
+                                            self.Reserver.loc[cb.text(), 'Ro_'+str(i+1)+'+'+term] = getattr(self.fitParams, term).value +\
+                                                                             float(re.search("\w+\=(\d+\.\d+)", self.TableW.item(i, 2).text()).group(1))
+                                            self.Reserver.loc[cb.text(), term] = getattr(self.fitParams, term).value
+                                            break
+                                    self.Reserver.loc[cb.text(), 'delta(' + term + ')'] = 0.000
+                                    self.Reserver.loc[cb.text(), 'delta(' + 'Ro_'+str(i+1)+'+'+term + ')'] = 0.000
                                 # self.Reserver.loc[key,term] = str(getattr(self.fitParams,term).value)
                             else:
                                 self.Reserver.loc[cb.text(), term] = getattr(self.fitParams, term).value
                                 self.Reserver.loc[cb.text(), 'delta(' + term + ')'] = 0.000
-
+                                
+                        # if getattr(self.fitParams, term).uvalue is None:
+                        #     if term in self.params_for_dR:
+                        #         for i in range(0, 20):
+                        #             if term == self.TableW.item(i, 9).text():
+                        #                 # print self.TableW.item(i,9).text()
+                        #                 print(self.TableW.item(i, 2).text())
+                        #                 self.Reserver.loc[cb.text(), 'Ro_'+str(i+1)+'+'+term] = getattr(self.fitParams, term).value +\
+                        #                                                      float(re.search("\w+\=(\d+\.\d+)", self.TableW.item(i, 2).text()).group(1))
+                        #                 self.Reserver.loc[cb.text(), term] = getattr(self.fitParams, term).value
+                        #                 break
+                        #         self.Reserver.loc[cb.text(), 'delta(' + term + ')'] = 0.000
+                        #         self.Reserver.loc[cb.text(), 'delta(' + 'Ro_'+str(i+1)+'+'+term + ')'] = 0.000
+                        #         # self.Reserver.loc[key,term] = str(getattr(self.fitParams,term).value)
+                        #     else:
+                        #         self.Reserver.loc[cb.text(), term] = getattr(self.fitParams, term).value
+                        #         self.Reserver.loc[cb.text(), 'delta(' + term + ')'] = 0.000;
                         else:
                             if term in self.params_for_dR:
                                 # t_array = str(getattr(self.fitParams, term).uvalue).split('+/-')
@@ -1243,19 +1360,23 @@ class MainWindow(qt.QMainWindow):
                                 #     str(eval(str_eqn)).split('+/-')[1])
                         else:
                             if term in self.params_for_dR:
-                                t_array = str(getattr(self.fitParams, term).uvalue).split('+/-')
-                                self.Reserver.loc[cb.text(), term] = float(t_array[0])
-                                for i in range(0, 20):
-                                    if term == self.TableW.item(i, 9).text():
-                                        # print(re.search("\w+\=(\d+\.\d+)", self.TableW.item(i, 2).text()).group(1))
-                                        self.Reserver.loc[cb.text(), 'Ro_' + str(i+1) + '+' + term] = float(re.search("\w+\=(\d+\.\d+)",self.TableW.item(i, 2).text()).group(1)) +\
-                                                                                                    getattr(self.fitParams, term).value
-                                        self.Reserver.loc[cb.text(), term] = getattr(self.fitParams, term).value
-                                        self.Reserver.loc[cb.text(), 'delta(' + 'Ro_' + str(i+1) + '+' + term + ')'] = 0.000
-                                        self.Reserver.loc[cb.text(), 'delta(' + term + ')'] = 0.000
-                                        break
-                                    else:
-                                        pass
+                                try :
+                                    t_array = str(getattr(self.fitParams, term).uvalue).split('+/-')
+                                    self.Reserver.loc[cb.text(), term] = float(t_array[0])
+                                    for i in range(0, 20):
+                                        if term == self.TableW.item(i, 9).text():
+                                            # print(re.search("\w+\=(\d+\.\d+)", self.TableW.item(i, 2).text()).group(1))
+                                            self.Reserver.loc[cb.text(), 'Ro_' + str(i+1) + '+' + term] = \
+                                                float(re.search("\w+\=(\d+\.\d+)",self.TableW.item(i, 2).text()).group(1)) +\
+                                                                                                        getattr(self.fitParams, term).value
+                                            self.Reserver.loc[cb.text(), term] = getattr(self.fitParams, term).value
+                                            self.Reserver.loc[cb.text(), 'delta(' + 'Ro_' + str(i+1) + '+' + term + ')'] = 0.000
+                                            self.Reserver.loc[cb.text(), 'delta(' + term + ')'] = 0.000
+                                            break
+                                        else:
+                                            pass
+                                except AttributeError:
+                                    print (term)
                             else:
                                 self.Reserver.loc[cb.text(), term] = getattr(self.fitParams, term).value
                                 self.Reserver.loc[cb.text(), 'delta(' + term + ')'] = 0.000
@@ -1781,8 +1902,8 @@ class MainWindow(qt.QMainWindow):
                 array_index = []
                 if re.search('ALL', self.uiform_data.lineEdit.text()):
                     array_index = range(1, self.uiform_data.listWidget.count() + 1)
-                elif self.uiform_data.lineEdit.text() == re.match(r"(\d+\-?\d*\,?\s*)+", self.uiform_data.text()).group(0):
-                    array = self.uiform_data.text().split(',')
+                elif re.match(r"(\d+\-?\d*\,?\s*)+", self.uiform_data.lineEdit.text()):
+                    array = self.uiform_data.lineEdit.text().split(',')
                     for term in array:
                         if re.search('\d+\-\d+', term):
                             t_array = term.split('-')

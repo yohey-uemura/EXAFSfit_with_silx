@@ -1,21 +1,16 @@
-import sys
-import os
-import string
-import glob
-import re
-import yaml
-import math
+import sys, os, string, glob, re, yaml, math, shutil
 import numpy as np
 import numpy.linalg as linalg
 import scipy.optimize as optim
 import scipy.interpolate as interp
 import scipy.integrate as INT
-import shutil
 import pandas as pd
 import larch
+from larch.utils import show as group_show
 from larch_plugins.xafs import autobk, xftf, xftr, ftwindow
-from larch_plugins.io import read_ascii
+from larch_plugins.io import read_ascii, read_athena
 import larch.builtins as larch_builtins
+#import larch.builtins.subgroup as show_subgroup
 import natsort
 import pandas
 
@@ -48,6 +43,29 @@ def read_file(file):
     else:
         dat = read_ascii(file,_larch=mylarch)
         return dat.data
+
+def read_athena_binary(file):
+    dirname = os.path.dirname(file)+'/'+os.path.basename(file).replace('.','_')
+    if os.path.isdir(dirname):
+        shutil.rmtree(dirname)
+    #     os.mkdir(os.path.dirname(file)+'/'+os.path.basename(file).replace('.','_'))
+    # else:
+    os.mkdir(dirname)
+    
+    dat = read_athena(file,_larch=mylarch)
+    #print (larch_builtins._subgroups(dat,_larch=mylarch))
+    datgroup = larch_builtins._subgroups(dat,_larch=mylarch)
+    for i in range(len(datgroup)):
+        g = getattr(dat,datgroup[i])
+        pandas.DataFrame(
+            { '#k': g.k,
+              'chi': g.chi
+                }
+            ).to_csv(dirname+'/'+datgroup[i]+'.chi',index=False)
+    #print (larch_builtins._subgroups(_g.autobk_details,_larch=mylarch))
+    #print (getattr(dat,datgroup[0]))
+    #print (group_show.show(dat,_larch=mylarch))
+    return dirname, datgroup
 
 def read_chi_file(file):
     k = np.array([])
@@ -379,7 +397,9 @@ def calc_FT(k,chi,kmin_,kmax_,kweight_,FTwindow,delta_k):
     return ft.r, ft.chir_mag, ft.chir_im
 
 def calcFTwindow(x,x_min,x_max,delta_k,wtype):
-    return ftwindow(x,xmin=x_min,xmax=x_max,dk=delta_k,window=wtype)
+    print (x_min)
+    print(x_max)
+    return ftwindow(x,xmin=x_min,xmax=x_max,dx=delta_k,window=wtype)
 
 def read_FEFF(path_to_feff):
     #print path_to_feff+'/paths.dat'
@@ -427,6 +447,7 @@ def read_FEFF(path_to_feff):
         else:
             df = pandas.read_csv(list_file,delim_whitespace=True,skiprows=3,names=rNames)
         #print len(df['amp ratio'].as_matrix())
+        #for i in range(0,len(df['amp ratio'].as_matrix())):
         for i in range(0,len(df['amp ratio'].values)):
             #print df['amp ratio'][i]
             txt_array['path_'+str(df['pathindex'][i])] += "{:16s}".format(str(df['amp ratio'][i])) + "{:16s}".format(str(df['deg'][i]))
