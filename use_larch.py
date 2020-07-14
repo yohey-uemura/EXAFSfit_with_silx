@@ -41,7 +41,8 @@ def read_file(file):
             ut = t_array[:]
         return Energy, ut
     else:
-        dat = read_ascii(file,_larch=mylarch)
+        dat = read_ascii(file)
+        #dat = read_ascii(file,_larch=mylarch)
         return dat.data
 
 def read_athena_binary(file):
@@ -102,7 +103,8 @@ def read_chi_file(file):
             elif sign == 'read' and re.match (r"\[XI_END\]",line.rstrip()):
                 break
     else:
-        dat = read_ascii(file,_larch=mylarch)
+        #dat = read_ascii(file,_larch=mylarch)
+        dat = read_ascii(file)
         k, chi =  dat.data[0:2]
     return k, chi
 
