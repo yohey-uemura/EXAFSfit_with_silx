@@ -15,7 +15,7 @@ You can scattering paths one by one.
 
 (2) install Larch with the command below
 
-    conda install -yc GSECARS
+    conda install -yc GSECARS xraylarch
     
 (3) install natsort
 
