@@ -1147,7 +1147,7 @@ class MainWindow(qt.QMainWindow):
                 if re.match("delta.*", term) != None:
                     pass
                 elif term == 'R-factor':
-                    self.Reserver.loc[cb.text(), term] = float(re.search("r\-factor\s+\=\s+(\d+\.\d+)", line).group(1))
+                    self.Reserver.loc[cb.text(), term] = float(re.search("r\-factor\s+\=\s+(\d+\.\d+.*)", line).group(1))
                 elif term == 'log':
                     self.Reserver.loc[cb.text(), term] = line
                 else:
