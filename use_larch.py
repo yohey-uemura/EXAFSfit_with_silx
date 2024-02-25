@@ -13,13 +13,13 @@ import scipy.integrate as INT
 import shutil
 import pandas as pd
 import larch
-from larch_plugins.xafs import autobk, xftf, xftr, ftwindow
-from larch_plugins.io import read_ascii
+from larch.xafs import autobk, xftf, xftr, ftwindow
+from larch.io import read_ascii
 import larch.builtins as larch_builtins
 import natsort
 import pandas
 
-mylarch = larch.Interpreter(with_plugins=False)
+mylarch = larch.Interpreter()
 
 def read_file(file):
     m = re.search(r'\.[a-zA-Z0-9]+$',os.path.basename(file))
@@ -427,7 +427,7 @@ def read_FEFF(path_to_feff):
         else:
             df = pandas.read_csv(list_file,delim_whitespace=True,skiprows=3,names=rNames)
         #print len(df['amp ratio'].as_matrix())
-        for i in range(0,len(df['amp ratio'].values)):
+        for i in range(0,len(df['amp ratio'].as_matrix())):
             #print df['amp ratio'][i]
             txt_array['path_'+str(df['pathindex'][i])] += "{:16s}".format(str(df['amp ratio'][i])) + "{:16s}".format(str(df['deg'][i]))
         return txt_array

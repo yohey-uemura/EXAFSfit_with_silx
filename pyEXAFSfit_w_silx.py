@@ -20,10 +20,8 @@ import fileinput
 import re
 import use_larch as LarchF
 import larch
-from larch_plugins.xafs import autobk, xftf, xftr, feffit, feffrunner
-from larch_plugins.xafs.feffit import feffit_transform, feffit_dataset, feffit_report
-from larch_plugins.xafs.feffdat import feffpath
-from larch_plugins.io import read_ascii
+from larch.xafs import autobk, xftf, xftr, feffit, ff2chi, feffrunner, feffit_transform, feffit_dataset, feffit_report, feffpath
+from larch.io import read_ascii
 import larch.builtins as larch_builtins
 import larch.fitting as larchfit
 
@@ -37,8 +35,8 @@ import matplotlib
 matplotlib.use('Qt5Agg')
 
 
-from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT as NavigationToolbar
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 
 
@@ -128,7 +126,7 @@ class MainWindow(qt.QMainWindow):
         self.setWindowTitle('PlotWidget with spinboxes')
         self.datdir = os.environ[params.homestr]
         self.timer = qt.QBasicTimer()
-        self.mylarch = larch.Interpreter(with_plugins=False)
+        self.mylarch = larch.Interpreter()
         print (self.datdir)
         MainWidget = qt.QWidget(parent=self.centralWidget())
         LeftWidget = qt.QDockWidget(parent=self)
@@ -348,6 +346,8 @@ class MainWindow(qt.QMainWindow):
 
             self.dialog_SetRange.done(1)
 
+
+
         self.suffix_d.pushButton.clicked.connect(change_suffix)
         self.uiSetRange.pB_set.clicked.connect(guessWithRange)
 
@@ -392,7 +392,6 @@ class MainWindow(qt.QMainWindow):
                 self.uiTableView.lE_params.insert(txt)
             else:
                 self.uiTableView.lE_params.insert(';'+txt)
-            self.dialog_addAnotherParams.done(1)
 
         # self.uiTableView.lE_params.customContextMenuRequested.connect(openMenu2)
 
@@ -598,8 +597,8 @@ class MainWindow(qt.QMainWindow):
 
             r, chir, chir_mag, chir_im = LarchF.calcFT(k, chi, kweight,
                                                        k_min, k_max, wind, dk_wind)
-            # kwindow = LarchF.calcFTwindow(k, k_min, k_max, dk_wind, wind)
-            # rwindow = LarchF.calcFTwindow(r, r_min, r_max, dr_wind, wind)
+            kwindow = LarchF.calcFTwindow(k, k_min, k_max, dk_wind, wind)
+            rwindow = LarchF.calcFTwindow(r, r_min, r_max, dr_wind, wind)
             q, chi_q = LarchF.calc_rFT(r, chir, r_min, r_max,
                                        k_max + 2.0, wind, dr_wind)
             if self.uiform_ctrl.rB_plot_k.isChecked():
@@ -710,14 +709,8 @@ class MainWindow(qt.QMainWindow):
                     ymin, ymax = plt.getGraphYLimits()
                     l = plt.getAllCurves()[0]
                     # x = np.arange(xmin,xmax,0.05)
-                    # x = l.getData()[0]
-                    xt = np.arange(l.getData()[0][0],l.getData()[0][-1],0.05)
-                    # print (x)
-                    # print (k_min)
-                    # print(k_max)
-                    FTwindowt = LarchF.calcFTwindow(xt,k_min,k_max,dk_wind,wind)
                     x = l.getData()[0]
-                    FTwindow = np.interp(x,xt,FTwindowt)
+                    FTwindow = LarchF.calcFTwindow(x,k_min,k_max,dr_wind,wind)
                     plt.addCurve(x,FTwindow*ymax*1.05,legend="window",
                                  linewidth=1.5,color=params.dict_color["DarkGreen"])
                     plt.setGraphXLimits(0, 16.0)
@@ -729,11 +722,8 @@ class MainWindow(qt.QMainWindow):
                     ymin, ymax = plt.getGraphYLimits()
                     l = plt.getAllCurves()[0]
                     # x = np.arange(xmin,xmax,0.05)
-                    # x = l.getData()[0]
-                    xt = np.arange(l.getData()[0][0], l.getData()[0][-1], 0.05)
-                    FTwindowt = LarchF.calcFTwindow(xt,r_min,r_max,dr_wind,wind)
                     x = l.getData()[0]
-                    FTwindow = np.interp(x, xt, FTwindowt)
+                    FTwindow = LarchF.calcFTwindow(x,r_min,r_max,dr_wind,wind)
                     plt.addCurve(x,FTwindow*ymax*1.05,legend="window",
                                  linewidth=1.5, color=params.dict_color["DarkGreen"])
                     plt.setGraphXLimits(0, 6)
@@ -746,11 +736,8 @@ class MainWindow(qt.QMainWindow):
                     ymin, ymax = plt.getGraphYLimits()
                     l = plt.getAllCurves()[0]
                     # x = np.arange(xmin,xmax,0.05)
-                    # x = l.getData()[0]
-                    xt = np.arange(l.getData()[0][0], l.getData()[0][-1], 0.05)
-                    FTwindowt = LarchF.calcFTwindow(xt, k_min, k_max, dk_wind, wind)
                     x = l.getData()[0]
-                    FTwindow = np.interp(x, xt, FTwindowt)
+                    FTwindow = LarchF.calcFTwindow(x, k_min, k_max, dk_wind, wind)
                     plt.addCurve(x, FTwindow * ymax * 1.05, legend="window",
                                  linewidth=1.5,color=params.dict_color["DarkGreen"])
                     plt.setGraphXLimits(0, 16.0)
@@ -1147,7 +1134,7 @@ class MainWindow(qt.QMainWindow):
                 if re.match("delta.*", term) != None:
                     pass
                 elif term == 'R-factor':
-                    self.Reserver.loc[cb.text(), term] = float(re.search("r\-factor\s+\=\s+(\d+\.\d+.*)", line).group(1))
+                    self.Reserver.loc[cb.text(), term] = float(re.search("r\-factor\s+\=\s+(\d+\.\d+)", line).group(1))
                 elif term == 'log':
                     self.Reserver.loc[cb.text(), term] = line
                 else:
